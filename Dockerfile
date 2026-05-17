@@ -20,13 +20,10 @@ RUN apt-get update \
     && mv adwaita-icon-theme_*.deb /adwaita-icon-theme.deb
 
 ###############################################################################
-# Build the binary
+# Install rust dependencies once (reused)
 ###############################################################################
-FROM rust:slim-bookworm AS rust-builder
-
-WORKDIR /build
-
-# System deps needed to compile common Rust crates (OpenSSL, protobuf, etc.).
+FROM rust:slim-bookworm AS chef
+ 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     ca-certificates \
@@ -34,9 +31,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     pkg-config \
     protobuf-compiler \
-    && rm -rf /var/lib/apt/lists/*
-
-# Build the binary
+    && rm -rf /var/lib/apt/lists/* \
+    && cargo install cargo-chef
+ 
+WORKDIR /build
+ 
+###############################################################################
+# Compute the dependency fingerprint from Cargo.toml + Cargo.lock (only reruns when those files change)
+###############################################################################
+FROM chef AS planner
+ 
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+ 
+###############################################################################
+# Build the depdencies when Cargo.toml + Cargo.lock change
+###############################################################################
+FROM chef AS rust-builder
+ 
+COPY --from=planner /build/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+ 
+###############################################################################
+# Compile actual vod_downloader
+###############################################################################
 COPY . .
 RUN cargo build --release
 
