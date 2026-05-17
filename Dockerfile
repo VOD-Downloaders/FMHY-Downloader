@@ -102,17 +102,3 @@ EXPOSE 8080
 # dumb-init as PID 1 ensures clean signal forwarding and zombie reaping
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["/app/vod_downloader"]
-
-# =============================================================================
-# Build & run locally:
-#   docker build -t my-rust-chromium-app .
-#   docker run -p 8080:8080 my-rust-chromium-app
-#
-# To test Chromium inside the container:
-#   docker exec -it <container> xvfb-run -s "-screen 0 1600x1200x24" \
-#     chromium --no-sandbox --headless --dump-dom https://example.com
-#
-# Multi-arch build (requires buildx):
-#   docker buildx create --use
-#   docker buildx build --platform linux/amd64,linux/arm64 -t my-rust-chromium-app .
-# =============================================================================
