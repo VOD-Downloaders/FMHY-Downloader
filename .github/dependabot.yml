@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    assignees:
+      - "ggjorven"
+    commit-message:
+      prefix: ""
+    pull-request-branch-name:
+      separator: "/"
+      
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    assignees:
+      - "ggjorven"
+    commit-message:
+      prefix: ""
+    pull-request-branch-name:
+      separator: "/"
