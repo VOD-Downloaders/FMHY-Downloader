@@ -34,12 +34,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     pkg-config \
     protobuf-compiler \
-	git \
     && rm -rf /var/lib/apt/lists/*
 
 # Build the binary
-RUN git clone https://github.com/VOD-Downloaders/VOD-Downloader.git
-RUN cd VOD-Downloader && cargo build --release
+COPY . .
+RUN cargo build --release
 
 ###############################################################################
 # Actual container with chromium and rust runtime
@@ -85,7 +84,7 @@ RUN dpkg -i /tmp/libgl1-mesa-dri.deb \
     && chown -R ${APP_USER}:${APP_USER} /app /config
 
 # Copy the compiled Rust binary from the build stage
-COPY --from=rust-builder /build/VOD-Downloader/target/release/${APP_BIN} /app/${APP_BIN}
+COPY --from=rust-builder /build/target/release/${APP_BIN} /app/${APP_BIN}
 RUN chmod +x /app/${APP_BIN} \
     && chown ${APP_USER}:${APP_USER} /app/${APP_BIN}
 
