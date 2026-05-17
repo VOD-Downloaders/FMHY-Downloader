@@ -1,12 +1,19 @@
 #[macro_use]
 mod logging;
+mod env;
 
-fn main()
-{
+fn main() -> Result<(), ()> {
     logging::add_sink(Box::new(logging::ConsoleSink::new(None)));
 
-    trace!("{}", "Hello, world!");
-    info!("{}", "Hello, world!");
-    warning!("{}", "Hello, world!");
-    error!("{}", "Hello, world!");
+    let result = env::EnvOptions::from_stdenv();
+    let Ok(env) = result else {
+        error!("{:?}", result.unwrap_err());
+        return Err(());
+    };
+
+    info!("Env options: {:?}", env);
+
+    loop {}
+
+    Ok(())
 }
