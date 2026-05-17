@@ -1,4 +1,5 @@
 use std::{fs::{File, OpenOptions}, io::Write, path::Path, sync::Mutex};
+use colored::Colorize;
 
 /////////////////////////////////////////////////////
 // LogLevel
@@ -42,7 +43,27 @@ impl Sink for ConsoleSink
     {
         if log_level >= self.minimum_level
         {
-            println!("{}", message);
+            match log_level
+            {
+                LogLevel::Trace => 
+                {
+                    println!("{}", message);
+                },
+
+                LogLevel::Info => 
+                {
+                    println!("{}", message.green());
+                },
+                LogLevel::Warn => 
+                {
+                    println!("{}", message.yellow());
+                },
+                LogLevel::Error => 
+                {
+                    println!("{}", message.red());
+                },
+            }
+
         }
     }
 }
