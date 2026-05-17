@@ -1,0 +1,26 @@
+services:
+  vod-downloader:
+    build: .
+    container_name: vod_downloader
+    environment:
+      - LOG_LEVEL=info
+      - FLARESOLVERR_URL=http://flaresolverr:8191
+    ports:
+      - 8080:8080
+    depends_on:
+      - flaresolverr
+    # HEALTHCHECK is in Dockerfile
+    restart: unless-stopped
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=info
+    healthcheck:
+      # curl https://www.google.com checks internet connectivity instead of ping and nslookup, because this container doesn't have them
+      test: sh -c "curl https://www.google.com && curl -s http://localhost:8191 && curl -s http://localhost:8191/health" 
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    restart: unless-stopped
