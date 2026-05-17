@@ -35,7 +35,7 @@ Contributions are welcome.
 
 | Crate | Version | License | Purpose |
 |---|---|---|---|
-| [colored](https://crates.io/crates/colored) | 3.1.1 | MPL 2.0 | Coloured printing |
+| [colored](https://crates.io/crates/colored) | 3.1.1 | MPL-2.0 | Coloured printing |
 | [chrono](https://crates.io/crates/chrono) | 0.4 | MIT / Apache-2.0 | Timestamp handling |
 | [reqwest](https://crates.io/crates/reqwest) | 0.13 | MIT / Apache-2.0 | Blocking HTTP client for Dispatcharr API communication |
 | [serde](https://crates.io/crates/serde) | 1 | MIT / Apache-2.0 | Serialization/deserialization framework |
