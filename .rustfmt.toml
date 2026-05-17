@@ -1,0 +1,42 @@
+unstable_features = true
+edition = "2024"
+style_edition = "2024" # NIGHTLY
+
+fn_params_layout = "Compressed"
+
+newline_style = "Unix"
+tab_spaces = 4
+hard_tabs = false
+
+use_small_heuristics = "Default"
+max_width = 150
+fn_call_width = 150
+
+brace_style = "AlwaysNextLine" # NIGHTLY
+control_brace_style = "AlwaysNextLine" # NIGHTLY
+
+trailing_comma = "Vertical"
+match_block_trailing_comma = true
+binop_separator = "Front" # NIGHTLY
+float_literal_trailing_zero = "Always" # NIGHTLY
+
+blank_lines_upper_bound = 1 # NIGHTLY
+
+normalize_comments = false
+
+force_explicit_abi = true
+
+match_arm_leading_pipes = "Never"
+
+merge_derives = true
+
+# removed_nested_parens = true
+reorder_imports = false
+reorder_modules = false
+use_field_init_shorthand = false
+use_try_shorthand = true
+format_code_in_doc_comments = true # NIGHTLY
+format_macro_matchers = true # NIGHTLY
+format_macro_bodies = true # NIGHTLY
+hex_literal_case = "Lower" # NIGHTLY
+reorder_impl_items = false # NIGHTLY
