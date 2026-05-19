@@ -48,13 +48,14 @@ impl EnvOptions {
         Default::default()
     }
 
-    pub fn from_stdenv() -> Result<Self, EnvError> {
+    pub fn from_env() -> Result<Self, EnvError> {
         let Ok(flaresolverr_url) = env::var("FLARESOLVERR_URL") else {
             return Err(EnvError::MissingFlaresolverrUrl);
         };
+        let flaresolverr_url = Self::parse_flaresolverr_url(flaresolverr_url.as_str())?;
 
         Ok(Self {
-            flaresolverr_url: flaresolverr_url,
+            flaresolverr_url: flaresolverr_url.to_string(),
             ..Default::default()
         })
     }
