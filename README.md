@@ -35,8 +35,10 @@ Contributions are welcome.
 
 | Crate | Version | License | Purpose |
 |---|---|---|---|
-| [colored](https://crates.io/crates/colored) | 3.1.1 | MPL-2.0 | Coloured printing |
+| [colored](https://crates.io/crates/colored) | 3.1 | MPL-2.0 | Coloured printing |
 | [chrono](https://crates.io/crates/chrono) | 0.4 | MIT / Apache-2.0 | Timestamp handling |
+| [axum](https://crates.io/crates/axum) | 0.8 | MIT | HTTP routing and request-handling |
+| [tokio](https://crates.io/crates/tokio) | 1 | MIT | A runtime for writing reliable asynchronous applications |
 | [reqwest](https://crates.io/crates/reqwest) | 0.13 | MIT / Apache-2.0 | Blocking HTTP client for Dispatcharr API communication |
 | [serde](https://crates.io/crates/serde) | 1 | MIT / Apache-2.0 | Serialization/deserialization framework |
 | [serde_json](https://crates.io/crates/serde_json) | 1 | MIT / Apache-2.0 | JSON parsing for API payloads |
