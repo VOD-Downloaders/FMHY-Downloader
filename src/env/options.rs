@@ -12,6 +12,7 @@ pub enum EnvError {
     FlaresolverrUrlNoHTTP { url: String },
     InvalidLogLevel { log_level: String },
     InvalidWebUIPort { port: String },
+    InvalidThreadCount { thread_count: String },
 }
 
 impl fmt::Display for EnvError {
@@ -29,6 +30,9 @@ impl fmt::Display for EnvError {
             EnvError::InvalidWebUIPort { port } => {
                 write!(f, "Expected the WebUI port to be a 16 bit unsigned integer, got: {}", port)
             },
+            EnvError::InvalidThreadCount { thread_count } => {
+                write!(f, "Expected the thread count to be an 8 bit unsigned integer, got: {}", thread_count)
+            },
         }
     }
 }
@@ -41,6 +45,7 @@ pub struct EnvOptions {
     pub log_level: LogLevel,
     pub flaresolverr_url: String,
     pub webui_port: u16,
+    pub download_threads: u8,
 }
 
 impl Default for EnvOptions {
@@ -49,6 +54,7 @@ impl Default for EnvOptions {
             log_level: LogLevel::Info,
             flaresolverr_url: "".to_string(),
             webui_port: 8080,
+            download_threads: 1,
         }
     }
 }
@@ -60,11 +66,13 @@ impl EnvOptions {
         let log_level = Self::parse_log_level()?;
         let flaresolverr_url = Self::parse_flaresolverr_url()?;
         let webui_port = Self::parse_webui_port()?;
+        let download_threads = Self::parse_download_threads()?;
 
         Ok(Self {
             log_level: log_level.unwrap_or(default.log_level),
             flaresolverr_url: flaresolverr_url.to_string(),
             webui_port: webui_port.unwrap_or(default.webui_port),
+            download_threads: download_threads.unwrap_or(default.download_threads),
             ..default
         })
     }
@@ -105,5 +113,17 @@ impl EnvOptions {
         let port = port.parse::<u16>().map_err(|_error| return EnvError::InvalidWebUIPort { port: port })?;
 
         Ok(Some(port))
+    }
+
+    fn parse_download_threads() -> Result<Option<u8>, EnvError> {
+        let Ok(threads) = env::var("DOWNLOAD_THREADS") else {
+            return Ok(None);
+        };
+
+        let threads = threads
+            .parse::<u8>()
+            .map_err(|_error| return EnvError::InvalidThreadCount { thread_count: threads })?;
+
+        Ok(Some(threads))
     }
 }
