@@ -19,14 +19,20 @@ impl fmt::Display for AppError {
     }
 }
 
-fn main() -> Result<(), AppError> {
+#[tokio::main]
+async fn main() -> Result<(), AppError> {
+    // Setup
     logging::add_sink(Box::new(logging::ConsoleSink::new(None)));
 
     let env = env::EnvOptions::from_env().map_err(|error| {
         return AppError::EnvError(error);
     })?;
 
-    trace!("Env options: {:?}", env);
+    info!("Env options: {:?}", env);
+
+    // Download worker thread(s)
+
+    // HTTP Server
 
     loop {}
 
