@@ -41,7 +41,10 @@ WORKDIR /build
 ###############################################################################
 FROM chef AS planner
  
-COPY . .
+# Only needs a minimal main instead of all source
+RUN mkdir src && echo 'fn main() {}' > src/main.rs
+COPY Cargo.lock .
+COPY Cargo.toml .
 RUN cargo chef prepare --recipe-path recipe.json
  
 ###############################################################################
@@ -55,7 +58,9 @@ RUN cargo chef cook --release --recipe-path recipe.json
 ###############################################################################
 # Compile actual vod_downloader
 ###############################################################################
-COPY . .
+COPY src/ ./src
+COPY Cargo.lock .
+COPY Cargo.toml .
 RUN cargo build --release
 
 ###############################################################################
@@ -105,6 +110,9 @@ RUN dpkg -i /tmp/libgl1-mesa-dri.deb \
 COPY --from=rust-builder /build/target/release/${APP_BIN} /app/${APP_BIN}
 RUN chmod +x /app/${APP_BIN} \
     && chown ${APP_USER}:${APP_USER} /app/${APP_BIN}
+
+# Copy web files
+COPY web/ ./web
 
 VOLUME /config
 
