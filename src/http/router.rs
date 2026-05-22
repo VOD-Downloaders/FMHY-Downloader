@@ -1,3 +1,4 @@
+use core::fmt;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -5,6 +6,27 @@ use serde_json::json;
 use axum::{routing, response};
 
 use super::super::env;
+
+/////////////////////////////////////////////////////
+// RouteError
+/////////////////////////////////////////////////////
+#[derive(Debug)]
+pub enum RouteError
+{
+    FailedToBind{ port: u16, error: std::io::Error },
+}
+
+impl fmt::Display for RouteError
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self
+        {
+            RouteError::FailedToBind { port, error } => {
+                write!(f, "Failed to bind to port {} with error: {}.", port, error)
+            }
+        }
+    }
+}
 
 /////////////////////////////////////////////////////
 // Router
@@ -15,44 +37,87 @@ pub struct Router {
 }
 
 impl Router {
-    pub async fn new(options: env::EnvOptions) -> Self {
+    pub async fn new(options: env::EnvOptions) -> Result<Self, RouteError> {
         let address = "0.0.0.0:".to_string() + options.webui_port.to_string().as_str();
-        let listener = tokio::net::TcpListener::bind(address).await.unwrap(); // TODO: Handle result
+        let listener = tokio::net::TcpListener::bind(address.as_str()).await.map_err(|error| { return RouteError::FailedToBind { port: options.webui_port, error: error }})?;
+
+        info!("HTTP server listening on {}.", address.as_str());
 
         let router = Self::init_router();
 
-        Self {
+        Ok(Self {
             router: router,
             listener: listener,
-        }
+        })
     }
 
     pub async fn serve(self) {
-        axum::serve(self.listener, self.router).await.unwrap(); // TODO: Handle result
+        // NOTE: Never returns an error
+        axum::serve(self.listener, self.router)
+            .with_graceful_shutdown(Self::shutdown_signal())
+            .await
+            .unwrap();
+    }
+
+    async fn shutdown_signal() {
+        let ctrl_c = async {
+            tokio::signal::ctrl_c()
+                .await
+                .expect("failed to install Ctrl+C handler");
+        };
+
+        #[cfg(unix)]
+        let terminate = async {
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                .expect("failed to install signal handler")
+                .recv()
+                .await;
+        };
+
+        #[cfg(not(unix))]
+        let terminate = std::future::pending::<()>();
+
+        tokio::select! {
+            _ = ctrl_c => {},
+            _ = terminate => {},
+        }
     }
 
     fn get_file_contents(path: &Path) -> String {
         match std::fs::read_to_string(path) {
-            Ok(contents) => contents,
+            Ok(contents) => {
+                trace!("Read {}'s contents.", path.display());
+                contents
+            },
             Err(error) => {
-                error!("Internal logic error, tried to retrieve file from {}, got error: {}", path.display(), error);
+                error!("Failed to read file \"{}\", got error: {}", path.display(), error);
                 "NOT FOUND".into()
             },
         }
     }
 
+    fn make_js(contents: String) -> ([(&'static str, &'static str); 1], String)
+    {
+        ([("content-type", "application/javascript")], contents)
+    }
+
     fn init_router() -> axum::Router {
         let index = Self::get_file_contents(PathBuf::from("web/index.html").as_path());
-        let js = Self::get_file_contents(PathBuf::from("web/index.js").as_path());
+        let index_js = Self::get_file_contents(PathBuf::from("web/index.js").as_path());
 
-        axum::Router::new()
+        let router = axum::Router::new()
             // Static routes
             .route("/", routing::get(response::Html(index)))
             
-            .route("/index.js", routing::get(|| async { ([("content-type", "application/javascript")], js) }))
+            // Logic files
+            .route("/index.js", routing::get(Self::make_js(index_js)))
 
             // Dynamic API calls
-            .route("/api/greet", routing::get(Self::greet_handler))
+            .route("/api/greet", routing::get(Self::greet_handler));
+
+        trace!("Created HTTP router.");
+
+        router
     }
 
     async fn greet_handler() -> response::Json<serde_json::Value> {
