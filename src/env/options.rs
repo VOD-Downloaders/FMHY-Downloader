@@ -13,6 +13,7 @@ pub enum EnvError {
     InvalidLogLevel { log_level: String },
     InvalidWebUIPort { port: String },
     InvalidThreadCount { thread_count: String },
+    ThreadCountExceedsMax { thread_count: u8, max: u8 },
 }
 
 impl fmt::Display for EnvError {
@@ -31,7 +32,10 @@ impl fmt::Display for EnvError {
                 write!(f, "Expected the WebUI port to be a 16 bit unsigned integer, got: {}", port)
             },
             EnvError::InvalidThreadCount { thread_count } => {
-                write!(f, "Expected the thread count to be an 8 bit unsigned integer, got: {}", thread_count)
+                write!(f, "Expected the thread count to be an 8 bit unsigned integer higher than 0, got: {}", thread_count)
+            },
+            EnvError::ThreadCountExceedsMax { thread_count, max } => {
+                write!(f, "Thread count {} exceeds the maximum allowed ({}).", thread_count, max)
             },
         }
     }
@@ -124,6 +128,29 @@ impl EnvOptions {
             .parse::<u8>()
             .map_err(|_error| return EnvError::InvalidThreadCount { thread_count: threads })?;
 
-        Ok(Some(threads))
+        if threads == 0 {
+            return Err(EnvError::InvalidThreadCount {
+                thread_count: threads.to_string(),
+            });
+        }
+
+        match std::thread::available_parallelism() {
+            Ok(max_threads) => {
+                let max_thread_count = max_threads.get() as u8;
+
+                if threads > max_thread_count {
+                    return Err(EnvError::ThreadCountExceedsMax {
+                        thread_count: threads,
+                        max: max_thread_count,
+                    });
+                }
+
+                return Ok(Some(threads));
+            },
+            Err(error) => {
+                warning!("Failed to retrieve maximum thread count with error: {}", error);
+                return Ok(Some(threads));
+            },
+        }
     }
 }
