@@ -4,6 +4,8 @@ use core::fmt;
 mod logging;
 mod env;
 mod http;
+mod request;
+mod downloader;
 
 #[derive(Debug)]
 enum AppError {
@@ -34,6 +36,10 @@ async fn main() -> Result<(), AppError> {
     })?;
 
     trace!("Env options: {:?}", env);
+
+    let creds = request::get_credentials(&env.flaresolverr_url, "https://cineby.sc").await.unwrap();
+
+    info!("Credentials: {:?}", creds);
 
     let router = http::Router::new(env).await.map_err(|error| {
         return AppError::RouteError(error);
