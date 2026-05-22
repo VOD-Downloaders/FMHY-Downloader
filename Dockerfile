@@ -70,6 +70,7 @@ FROM debian:bookworm-slim
 
 ARG APP_USER=voddownloader
 ARG APP_BIN=vod_downloader
+ARG WEBUI_PORT=8080
 
 # Bring in the dummy packages
 COPY --from=dummy-builder /*.deb /tmp/
@@ -121,7 +122,7 @@ USER ${APP_USER}
 # Chromium writes crash reports here; create it upfront to avoid runtime errors
 RUN mkdir -p "/app/.config/chromium/Crash Reports/pending"
 
-EXPOSE 8080
+EXPOSE ${WEBUI_PORT}
 
 # HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 CMD curl -f http://localhost:8080/health || exit 1
 
