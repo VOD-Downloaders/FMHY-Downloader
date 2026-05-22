@@ -3,6 +3,7 @@ use core::fmt;
 #[macro_use]
 mod logging;
 mod env;
+mod http;
 
 #[derive(Debug)]
 enum AppError {
@@ -28,13 +29,10 @@ async fn main() -> Result<(), AppError> {
         return AppError::EnvError(error);
     })?;
 
-    info!("Env options: {:?}", env);
+    trace!("Env options: {:?}", env);
 
-    // Download worker thread(s)
-
-    // HTTP Server
-
-    loop {}
+    let router = http::Router::new().await;
+    router.serve().await;
 
     Ok(())
 }
