@@ -99,7 +99,7 @@ RUN dpkg -i /tmp/libgl1-mesa-dri.deb \
     && rm -f /usr/lib/x86_64-linux-gnu/mfx/* \
     # Clean up apt artefacts and temp debs
     && rm -rf /var/lib/apt/lists/* /tmp/*.deb \
-    # Create a non-root user for the app (never run Chromium as root in prod)
+    # Create a non-root user for the app
     && useradd --home-dir /app --shell /bin/sh --create-home ${APP_USER} \
     # Move chromedriver next to the app
     && mv /usr/bin/chromedriver /app/chromedriver \
