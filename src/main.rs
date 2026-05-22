@@ -31,7 +31,7 @@ async fn main() -> Result<(), AppError> {
 
     trace!("Env options: {:?}", env);
 
-    let router = http::Router::new().await;
+    let router = http::Router::new(env).await;
     router.serve().await;
 
     Ok(())
