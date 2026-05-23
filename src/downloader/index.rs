@@ -1,0 +1,166 @@
+use core::fmt;
+
+use chromiumoxide::{
+    browser::{Browser, BrowserConfig},
+    cdp::browser_protocol::network::{EnableParams, EventRequestWillBeSent},
+    error::CdpError,
+};
+use futures::StreamExt;
+
+use super::super::request::Credentials;
+
+const CHROMIUM_PATH: &'static str = "/usr/lib/chromium/chromium";
+
+/////////////////////////////////////////////////////
+// IndexError
+/////////////////////////////////////////////////////
+#[derive(Debug)]
+pub enum IndexError {
+    FailedToStartBrowser { error: String },
+    FailedToOpenPage { page: String, error: CdpError },
+    FailedToStartNetworkMonitoring { error: CdpError },
+    FailedToSubsribeToNetworkEvents { error: CdpError },
+    FailedToFindIndexM3U,
+}
+
+impl fmt::Display for IndexError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            IndexError::FailedToStartBrowser { error } => {
+                write!(f, "Failed to start browser with error: {}", error)
+            },
+            IndexError::FailedToOpenPage { page, error } => {
+                write!(f, "Failed to open \"{}\" with error: {}", page, error)
+            },
+            IndexError::FailedToStartNetworkMonitoring { error } => {
+                write!(f, "Failed to start monitoring network requests with error: {}", error)
+            },
+            IndexError::FailedToSubsribeToNetworkEvents { error } => {
+                write!(f, "Failed to subscribe to network events with error: {}", error)
+            },
+            IndexError::FailedToFindIndexM3U => {
+                write!(f, "Failed to find the index m3u or m3u8 file before the timeout")
+            },
+        }
+    }
+}
+
+/////////////////////////////////////////////////////
+// IndexData
+/////////////////////////////////////////////////////
+pub struct IndexData {
+    pub base_url: String, // Can be empty for index files with full urls
+    pub files: Vec<String>,
+}
+
+/////////////////////////////////////////////////////
+// Index
+/////////////////////////////////////////////////////
+// docker exec -it vod_downloader xvfb-run -s "-screen 0 1600x1200x24" chromium --no-sandbox --headless --dump-dom https://example.com
+pub async fn get_index(url: &str, credentials: Credentials) -> Result<IndexData, IndexError> {
+    let request = get_index_request(url, credentials, 5).await?; // TODO: Timeout parameter somehow
+
+    Ok(IndexData {
+        base_url: "".into(),
+        files: Vec::new(),
+    })
+}
+
+async fn get_index_request(
+    url: &str, credentials: Credentials, timeout: u8,
+) -> Result<chromiumoxide::cdp::browser_protocol::network::Request, IndexError> {
+    let user_agent = "--user-agent=".to_string() + credentials.user_agent.as_str();
+
+    let (mut browser, mut handler) = Browser::launch(
+        BrowserConfig::builder()
+            .chrome_executable(CHROMIUM_PATH)
+            .no_sandbox()
+            .new_headless_mode()
+            .args(vec![
+                "--disable-setuid-sandbox",
+                "--disable-gpu",
+                "--disable-dev-shm-usage",
+                user_agent.as_str(),
+            ])
+            .build()
+            .map_err(|error| return IndexError::FailedToStartBrowser { error: error })?,
+    )
+    .await
+    .map_err(|error| IndexError::FailedToStartBrowser { error: error.to_string() })?;
+
+    // The handler drives the browser's event loop
+    let handler_task = tokio::spawn(async move {
+        while let Some(e) = handler.next().await {
+            if e.is_err() {
+                error!("Failed to handle event with error: {}", e.unwrap_err());
+                break;
+            }
+        }
+    });
+
+    let page = browser.new_page("about:blank").await.map_err(|error| {
+        return IndexError::FailedToOpenPage {
+            page: url.to_string(),
+            error: error,
+        };
+    })?;
+
+    // Start monitoring
+    page.execute(EnableParams::default()).await.map_err(|error| {
+        return IndexError::FailedToStartNetworkMonitoring { error: error };
+    })?;
+
+    // Subscribe to request events
+    let mut requests = page
+        .event_listener::<EventRequestWillBeSent>()
+        .await
+        .map_err(|error| return IndexError::FailedToSubsribeToNetworkEvents { error: error })?;
+
+    // TODO: Maybe add cookies from credentials
+
+    page.goto(url).await.map_err(|error| {
+        return IndexError::FailedToOpenPage {
+            page: url.to_string(),
+            error: error,
+        };
+    })?;
+
+    // Set a deadline
+    let deadline = tokio::time::sleep(std::time::Duration::from_secs(timeout as u64));
+    tokio::pin!(deadline);
+
+    let mut index_request = None;
+    loop {
+        tokio::select! {
+            Some(event) = requests.next() => {
+                let request = &event.request;
+
+                if request.method == "GET" && request.url.contains(".m3u") {
+                    info!("Found stream: {}", request.url);
+                    index_request = Some(request.clone());
+                    break;
+                }
+            }
+            _ = &mut deadline => {
+                warning!("Capture deadline of {} seconds elapsed before parsing all requests.", timeout);
+                break;
+            }
+        }
+    }
+
+    let _ = browser.close().await;
+    handler_task.abort();
+
+    match index_request {
+        Some(request) => Ok(request),
+        None => Err(IndexError::FailedToFindIndexM3U),
+    }
+}
+
+fn parse_index(contents: &str) -> Vec<String> {
+    contents
+        .lines()
+        .filter(|line| !line.starts_with('#') && !line.is_empty())
+        .map(|line| line.to_string())
+        .collect()
+}

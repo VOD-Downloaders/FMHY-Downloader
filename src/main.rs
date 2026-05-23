@@ -41,6 +41,10 @@ async fn main() -> Result<(), AppError> {
 
     info!("Credentials: {:?}", creds);
 
+    downloader::get_index("https://www.cineby.sc/movie/687163?play=true", creds)
+        .await
+        .unwrap();
+
     let router = http::Router::new(env).await.map_err(|error| {
         return AppError::RouteError(error);
     })?;
