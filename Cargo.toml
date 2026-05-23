@@ -10,9 +10,11 @@ repository = "https://github.com/VOD-Downloaders/VOD-Downloader"
 [dependencies]
 colored = "3.1"
 chrono = "0.4"
-axum = "0.8"
 tokio = { version = "1", features = ["full"] }
-reqwest = { version = "0.13", features = ["blocking", "json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+axum = "0.8"
+chromiumoxide = "0.9"
+futures = "0.3"
+reqwest = { version = "0.13", features = ["blocking", "json"] }
 symphonia = { version = "0.6", features = ["mkv", "isomp4"] }
