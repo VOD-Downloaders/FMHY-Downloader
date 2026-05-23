@@ -35,15 +35,21 @@ async fn main() -> Result<(), AppError> {
         return AppError::EnvError(error);
     })?;
 
+    logging::clear_sinks();
+    logging::add_sink(Box::new(logging::ConsoleSink::new(Some(env.log_level.clone()))));
+
     trace!("Env options: {:?}", env);
 
     let creds = request::get_credentials(&env.flaresolverr_url, "https://cineby.sc").await.unwrap();
 
     trace!("Credentials: {:?}", creds);
 
-    downloader::get_index("https://www.cineby.sc/movie/687163?play=true", &creds)
+    let index_data = downloader::get_index("https://www.cineby.sc/tv/66732/1/1?play=true", &creds)
         .await
         .unwrap();
+
+    let path = std::path::PathBuf::from("/segments.ts");
+    downloader::download_file(index_data, &creds, path.as_path(), 5).unwrap();
 
     let router = http::Router::new(env).await.map_err(|error| {
         return AppError::RouteError(error);

@@ -3,7 +3,7 @@ services:
     build: .
     container_name: vod_downloader
     environment:
-      - LOG_LEVEL=info
+      - LOG_LEVEL=debug
       - FLARESOLVERR_URL=http://flaresolverr:8191/v1
     ports:
       - 8080:8080

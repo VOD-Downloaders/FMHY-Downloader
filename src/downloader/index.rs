@@ -1,8 +1,10 @@
 use core::fmt;
+use std::collections::HashMap;
 
 use chromiumoxide::{
     browser::{Browser, BrowserConfig},
-    cdp::browser_protocol::network::{EnableParams, EventRequestWillBeSent},
+    cdp::browser_protocol::network::{EnableParams, EventRequestWillBeSent, SetExtraHttpHeadersParams, Headers},
+    cdp::browser_protocol::page::{EventLoadEventFired, NavigateParams},
     error::CdpError,
 };
 use futures::StreamExt;
@@ -10,7 +12,7 @@ use futures::StreamExt;
 use super::super::request;
 
 const CHROMIUM_PATH: &'static str = "/usr/lib/chromium/chromium";
-const TIMEOUT: u8 = 15; // Seconds
+const TIMEOUT: u8 = 10; // Seconds
 
 /////////////////////////////////////////////////////
 // IndexError
@@ -20,6 +22,7 @@ pub enum IndexError {
     FailedToStartBrowser { error: String },
     FailedToOpenPage { page: String, error: CdpError },
     FailedToStartNetworkMonitoring { error: CdpError },
+    FailedToAddCustomHeaders { error: String },
     FailedToSubsribeToNetworkEvents { error: CdpError },
     FailedToFindIndexM3U,
     FailedToDownloadIndexM3U { error: request::RequestFileError },
@@ -37,6 +40,9 @@ impl fmt::Display for IndexError {
             },
             IndexError::FailedToStartNetworkMonitoring { error } => {
                 write!(f, "Failed to start monitoring network requests with error: {}", error)
+            },
+            IndexError::FailedToAddCustomHeaders { error } => {
+                write!(f, "Failed to add custom headers to browser request, error: {}", error)
             },
             IndexError::FailedToSubsribeToNetworkEvents { error } => {
                 write!(f, "Failed to subscribe to network events with error: {}", error)
@@ -60,13 +66,20 @@ impl fmt::Display for IndexError {
 pub struct IndexData {
     pub base_url: String, // Can be empty for index files with full urls
     pub files: Vec<String>,
+    pub referer: String,
 }
 
 /////////////////////////////////////////////////////
 // Index
 /////////////////////////////////////////////////////
 pub async fn get_index(url: &str, credentials: &request::Credentials) -> Result<IndexData, IndexError> {
-    let request = get_index_request(url, credentials, TIMEOUT).await?; // TODO: Timeout parameter somehow
+    let referer = url
+        .find("://")
+        .and_then(|pos| url[pos + 3..].find('/').map(|p| pos + 3 + p))
+        .map(|pos| url[..=pos].to_string())
+        .unwrap_or_default();
+
+    let request = get_index_request(url, credentials, TIMEOUT, referer.as_str()).await?; // TODO: Timeout parameter somehow
 
     let mut base_url: String = String::new();
     if (request.url.as_str().contains("http://") || request.url.as_str().contains("https://"))
@@ -75,7 +88,9 @@ pub async fn get_index(url: &str, credentials: &request::Credentials) -> Result<
         base_url = request.url.as_str()[..=pos].to_string();
     }
 
-    let index_data = request::get_file_contents(request.url.as_str(), credentials, "https://www.cineby.sc/")
+    trace!("Sending index request to \"{}\", base_url: {}, referer: {}.", url, base_url, referer);
+
+    let index_data = request::get_file_contents(request.url.as_str(), credentials, referer.as_str())
         .map_err(|error| return IndexError::FailedToDownloadIndexM3U { error: error })?;
     let index_contents = String::from_utf8(index_data).map_err(|error| return IndexError::FailedToReadIndexM3U { error: error.to_string() })?;
 
@@ -86,11 +101,12 @@ pub async fn get_index(url: &str, credentials: &request::Credentials) -> Result<
     Ok(IndexData {
         base_url: base_url,
         files: urls,
+        referer: referer,
     })
 }
 
 async fn get_index_request(
-    url: &str, credentials: &request::Credentials, timeout: u8,
+    url: &str, credentials: &request::Credentials, timeout: u8, referer: &str,
 ) -> Result<chromiumoxide::cdp::browser_protocol::network::Request, IndexError> {
     let user_agent = "--user-agent=".to_string() + credentials.user_agent.as_str();
 
@@ -103,6 +119,7 @@ async fn get_index_request(
                 "--disable-setuid-sandbox",
                 "--disable-gpu",
                 "--disable-dev-shm-usage",
+                "--autoplay-policy=no-user-gesture-required",
                 user_agent.as_str(),
             ])
             .build()
@@ -140,13 +157,37 @@ async fn get_index_request(
         .map_err(|error| return IndexError::FailedToSubsribeToNetworkEvents { error: error })?;
 
     // TODO: Maybe add cookies from credentials
+    let mut header_map = HashMap::new();
+    header_map.insert("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+    header_map.insert("Accept-Language", "en-GB,en;q=0.9");
+    header_map.insert("Accept-Encoding", "gzip, deflate, br, zstd");
+    header_map.insert("Connection", "keep-alive");
+    header_map.insert("Priority", "u=0, i");
+    header_map.insert("Sec-Fetch-Dest", "document");
+    header_map.insert("Sec-Fetch-Mode", "navigate");
+    header_map.insert("Sec-Fetch-Site", "same-origin");
+    //header_map.insert("Sec-GPC", "1");
+    header_map.insert("Upgrade-Insecure-Requests", "1");
 
-    page.goto(url).await.map_err(|error| {
-        return IndexError::FailedToOpenPage {
+    let headers = Headers::new(serde_json::to_value(header_map).unwrap());
+
+    page.execute(SetExtraHttpHeadersParams::new(headers))
+        .await
+        .map_err(|error| IndexError::FailedToAddCustomHeaders { error: error.to_string() })?;
+
+    page.execute(NavigateParams::builder().url(url).referrer(referer).build().unwrap())
+        .await
+        .map_err(|error| IndexError::FailedToOpenPage {
             page: url.to_string(),
-            error: error,
-        };
-    })?;
+            error,
+        })?;
+
+    // Wait for full page load before starting deadline
+    let mut load_events = page
+        .event_listener::<EventLoadEventFired>()
+        .await
+        .map_err(|error| IndexError::FailedToSubsribeToNetworkEvents { error })?;
+    load_events.next().await; // blocks until DOMContentLoaded fires
 
     // Set a deadline
     let deadline = tokio::time::sleep(std::time::Duration::from_secs(timeout as u64));
@@ -157,6 +198,8 @@ async fn get_index_request(
         tokio::select! {
             Some(event) = requests.next() => {
                 let request = &event.request;
+
+                trace!("{} request to {} captured.", request.method, request.url);
 
                 if request.method == "GET" && request.url.contains(".m3u") {
                     info!("Found stream: {}", request.url);

@@ -117,7 +117,9 @@ COPY web/ ./web
 
 VOLUME /config
 
-USER ${APP_USER}
+# RUN chown -R ${APP_USER}:${APP_USER} /config
+
+# USER ${APP_USER}
 
 # Chromium writes crash reports here; create it upfront to avoid runtime errors
 RUN mkdir -p "/app/.config/chromium/Crash Reports/pending"

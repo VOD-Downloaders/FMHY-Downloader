@@ -1,0 +1,130 @@
+use core::fmt;
+
+use std::fs::{File, OpenOptions};
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
+
+use reqwest::blocking::Client;
+
+use super::IndexData;
+use super::super::request::Credentials;
+
+/////////////////////////////////////////////////////
+// DownloadError
+/////////////////////////////////////////////////////
+#[derive(Debug)]
+pub enum DownloadError {
+    FailedToCreateClient { error: String },
+    FailedToStart { url: String, error: String },
+    FailedToOpenOutputFile { file: PathBuf, error: String },
+    RequestFailed { url: String, exit_code: i32 },
+    FailedToReadBytes { url: String, error: String },
+    FailedToWriteBytes { file: PathBuf, error: String },
+}
+
+impl fmt::Display for DownloadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            DownloadError::FailedToCreateClient { error } => {
+                write!(f, "Failed to create HTTP client with error: {}", error)
+            },
+            DownloadError::FailedToStart { url, error } => {
+                write!(f, "Failed to start downloading data from \"{}\" with error: {}", url, error)
+            },
+            DownloadError::FailedToOpenOutputFile { file, error } => {
+                write!(f, "Failed to open output file \"{}\" with error: {}", file.display(), error)
+            },
+            DownloadError::RequestFailed { url, exit_code } => {
+                write!(f, "Request to \"{}\" failed with exit code: {}", url, exit_code)
+            },
+            DownloadError::FailedToReadBytes { url, error } => {
+                write!(f, "Failed to read the bytes from \"{}\"'s response, error: {}", url, error)
+            },
+            DownloadError::FailedToWriteBytes { file, error } => {
+                write!(f, "Failed to write bytes to \"{}\" due to error: {}", file.display(), error)
+            },
+        }
+    }
+}
+
+/////////////////////////////////////////////////////
+// Download
+/////////////////////////////////////////////////////
+pub fn download_file(index: IndexData, credentials: &Credentials, output_file: &Path, connect_timeout_per_segment: u8) -> Result<(), DownloadError> {
+    let mut client = Client::builder()
+        .redirect(reqwest::redirect::Policy::limited(10))
+        .connect_timeout(std::time::Duration::from_secs(connect_timeout_per_segment as u64))
+        .user_agent(credentials.user_agent.clone())
+        .referer(false)
+        .build()
+        .map_err(|error| DownloadError::FailedToCreateClient { error: error.to_string() })?;
+
+    let mut headers: reqwest::header::HeaderMap = reqwest::header::HeaderMap::new();
+    headers.insert("Referer", index.referer.parse().unwrap());
+
+    let mut file = OpenOptions::new().create(true).append(true).open(output_file).map_err(|error| {
+        return DownloadError::FailedToOpenOutputFile {
+            file: output_file.to_path_buf(),
+            error: error.to_string(),
+        };
+    })?;
+
+    for segment in index.files {
+        let full_url = index.base_url.clone() + segment.as_str();
+
+        // TODO: parameters
+        let max_tries = 3;
+        let mut last_error: Option<DownloadError> = None;
+
+        for attempt in 1..=max_tries {
+            match download_segment(full_url.as_str(), &mut client, headers.clone(), &mut file, output_file) {
+                Ok(_) => {
+                    break;
+                },
+                Err(error) => {
+                    warning!("[Attempt {}/{}] For segment \"{}\" failed with error: {}.", attempt, max_tries, segment.as_str(), error);
+                    last_error = Some(error);
+                },
+            }
+        }
+
+        if let Some(error) = last_error {
+            return Err(error);
+        }
+    }
+
+    Ok(())
+}
+
+fn download_segment(
+    url: &str, client: &mut Client, headers: reqwest::header::HeaderMap, output_file: &mut File, file_path: &Path,
+) -> Result<(), DownloadError> {
+    let response = client.get(url).headers(headers).send().map_err(|error| DownloadError::FailedToStart {
+        url: url.to_string(),
+        error: error.to_string(),
+    })?;
+
+    if !response.status().is_success() {
+        return Err(DownloadError::RequestFailed {
+            url: url.to_string(),
+            exit_code: response.status().as_u16() as i32,
+        });
+    }
+
+    match response.bytes() {
+        Ok(bytes) => {
+            output_file.write_all(&bytes).map_err(|error| {
+                return DownloadError::FailedToWriteBytes {
+                    file: file_path.to_path_buf(),
+                    error: error.to_string(),
+                };
+            })?;
+            Ok(())
+        },
+        Err(error) => Err(DownloadError::FailedToReadBytes {
+            url: url.to_string(),
+            error: error.to_string(),
+        }),
+    }
+}
