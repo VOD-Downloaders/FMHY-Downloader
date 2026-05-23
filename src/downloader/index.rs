@@ -23,6 +23,7 @@ pub enum IndexError {
     FailedToSubsribeToNetworkEvents { error: CdpError },
     FailedToFindIndexM3U,
     FailedToDownloadIndexM3U { error: request::RequestFileError },
+    FailedToReadIndexM3U { error: String },
 }
 
 impl fmt::Display for IndexError {
@@ -46,6 +47,9 @@ impl fmt::Display for IndexError {
             IndexError::FailedToDownloadIndexM3U { error } => {
                 write!(f, "Failed to download index m3u(8) file with error: {}", error)
             },
+            IndexError::FailedToReadIndexM3U { error } => {
+                write!(f, "Failed to read bytes from m3u file due to error: {}", error)
+            },
         }
     }
 }
@@ -61,17 +65,27 @@ pub struct IndexData {
 /////////////////////////////////////////////////////
 // Index
 /////////////////////////////////////////////////////
-// docker exec -it vod_downloader xvfb-run -s "-screen 0 1600x1200x24" chromium --no-sandbox --headless --dump-dom https://example.com
 pub async fn get_index(url: &str, credentials: &request::Credentials) -> Result<IndexData, IndexError> {
     let request = get_index_request(url, credentials, TIMEOUT).await?; // TODO: Timeout parameter somehow
+
+    let mut base_url: String = String::new();
+    if (request.url.as_str().contains("http://") || request.url.as_str().contains("https://"))
+        && let Some(pos) = request.url.as_str().rfind('/')
+    {
+        base_url = request.url.as_str()[..=pos].to_string();
+    }
+
     let index_data = request::get_file_contents(request.url.as_str(), credentials, "https://www.cineby.sc/")
         .map_err(|error| return IndexError::FailedToDownloadIndexM3U { error: error })?;
+    let index_contents = String::from_utf8(index_data).map_err(|error| return IndexError::FailedToReadIndexM3U { error: error.to_string() })?;
 
-    info!("{}", index_data);
+    trace!("Index M3U: {}", index_contents);
+
+    let urls = parse_index(index_contents.as_str());
 
     Ok(IndexData {
-        base_url: "".into(),
-        files: Vec::new(),
+        base_url: base_url,
+        files: urls,
     })
 }
 

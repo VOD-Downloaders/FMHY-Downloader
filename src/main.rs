@@ -39,7 +39,7 @@ async fn main() -> Result<(), AppError> {
 
     let creds = request::get_credentials(&env.flaresolverr_url, "https://cineby.sc").await.unwrap();
 
-    info!("Credentials: {:?}", creds);
+    trace!("Credentials: {:?}", creds);
 
     downloader::get_index("https://www.cineby.sc/movie/687163?play=true", &creds)
         .await
