@@ -33,12 +33,12 @@ impl fmt::Display for RequestError {
 /////////////////////////////////////////////////////
 #[derive(Debug, Deserialize)]
 pub struct Credentials {
-    url: String,
-    status: u32,
-    cookies: Vec<Cookie>,
+    pub url: String,
+    pub status: u32,
+    pub cookies: Vec<Cookie>,
 
     #[serde(rename = "userAgent")]
-    user_agent: String,
+    pub user_agent: String,
     // response: String,
 }
 
@@ -49,9 +49,9 @@ struct FlareSolverrResponse {
 }
 
 #[derive(Debug, Deserialize)]
-struct Cookie {
-    name: String,
-    value: String,
+pub struct Cookie {
+    pub name: String,
+    pub value: String,
 }
 
 /////////////////////////////////////////////////////
