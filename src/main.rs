@@ -41,7 +41,7 @@ async fn main() -> Result<(), AppError> {
 
     info!("Credentials: {:?}", creds);
 
-    downloader::get_index("https://www.cineby.sc/movie/687163?play=true", creds)
+    downloader::get_index("https://www.cineby.sc/movie/687163?play=true", &creds)
         .await
         .unwrap();
 

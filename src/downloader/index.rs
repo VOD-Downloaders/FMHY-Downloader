@@ -7,9 +7,10 @@ use chromiumoxide::{
 };
 use futures::StreamExt;
 
-use super::super::request::Credentials;
+use super::super::request;
 
 const CHROMIUM_PATH: &'static str = "/usr/lib/chromium/chromium";
+const TIMEOUT: u8 = 15; // Seconds
 
 /////////////////////////////////////////////////////
 // IndexError
@@ -21,6 +22,7 @@ pub enum IndexError {
     FailedToStartNetworkMonitoring { error: CdpError },
     FailedToSubsribeToNetworkEvents { error: CdpError },
     FailedToFindIndexM3U,
+    FailedToDownloadIndexM3U { error: request::RequestFileError },
 }
 
 impl fmt::Display for IndexError {
@@ -41,6 +43,9 @@ impl fmt::Display for IndexError {
             IndexError::FailedToFindIndexM3U => {
                 write!(f, "Failed to find the index m3u or m3u8 file before the timeout")
             },
+            IndexError::FailedToDownloadIndexM3U { error } => {
+                write!(f, "Failed to download index m3u(8) file with error: {}", error)
+            },
         }
     }
 }
@@ -57,8 +62,12 @@ pub struct IndexData {
 // Index
 /////////////////////////////////////////////////////
 // docker exec -it vod_downloader xvfb-run -s "-screen 0 1600x1200x24" chromium --no-sandbox --headless --dump-dom https://example.com
-pub async fn get_index(url: &str, credentials: Credentials) -> Result<IndexData, IndexError> {
-    let request = get_index_request(url, credentials, 5).await?; // TODO: Timeout parameter somehow
+pub async fn get_index(url: &str, credentials: &request::Credentials) -> Result<IndexData, IndexError> {
+    let request = get_index_request(url, credentials, TIMEOUT).await?; // TODO: Timeout parameter somehow
+    let index_data = request::get_file_contents(request.url.as_str(), credentials, "https://www.cineby.sc/")
+        .map_err(|error| return IndexError::FailedToDownloadIndexM3U { error: error })?;
+
+    info!("{}", index_data);
 
     Ok(IndexData {
         base_url: "".into(),
@@ -67,7 +76,7 @@ pub async fn get_index(url: &str, credentials: Credentials) -> Result<IndexData,
 }
 
 async fn get_index_request(
-    url: &str, credentials: Credentials, timeout: u8,
+    url: &str, credentials: &request::Credentials, timeout: u8,
 ) -> Result<chromiumoxide::cdp::browser_protocol::network::Request, IndexError> {
     let user_agent = "--user-agent=".to_string() + credentials.user_agent.as_str();
 
