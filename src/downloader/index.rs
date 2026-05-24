@@ -12,7 +12,7 @@ use futures::StreamExt;
 use super::super::request;
 
 const CHROMIUM_PATH: &'static str = "/usr/lib/chromium/chromium";
-const TIMEOUT: u8 = 10; // Seconds
+const TIMEOUT: u8 = 6; // Seconds
 
 /////////////////////////////////////////////////////
 // IndexError
@@ -78,6 +78,8 @@ pub async fn get_index(url: &str, credentials: &request::Credentials) -> Result<
         .and_then(|pos| url[pos + 3..].find('/').map(|p| pos + 3 + p))
         .map(|pos| url[..=pos].to_string())
         .unwrap_or_default();
+
+    trace!("Attempting to get index.m3u(8) file...");
 
     let request = get_index_request(url, credentials, TIMEOUT, referer.as_str()).await?; // TODO: Timeout parameter somehow
 
@@ -157,37 +159,28 @@ async fn get_index_request(
         .map_err(|error| return IndexError::FailedToSubsribeToNetworkEvents { error: error })?;
 
     // TODO: Maybe add cookies from credentials
-    let mut header_map = HashMap::new();
-    header_map.insert("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-    header_map.insert("Accept-Language", "en-GB,en;q=0.9");
-    header_map.insert("Accept-Encoding", "gzip, deflate, br, zstd");
-    header_map.insert("Connection", "keep-alive");
-    header_map.insert("Priority", "u=0, i");
-    header_map.insert("Sec-Fetch-Dest", "document");
-    header_map.insert("Sec-Fetch-Mode", "navigate");
-    header_map.insert("Sec-Fetch-Site", "same-origin");
-    //header_map.insert("Sec-GPC", "1");
-    header_map.insert("Upgrade-Insecure-Requests", "1");
+    // let mut header_map = HashMap::new();
+    // header_map.insert("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+    // header_map.insert("Accept-Language", "en-GB,en;q=0.9");
+    // header_map.insert("Accept-Encoding", "gzip, deflate, br, zstd");
+    // header_map.insert("Connection", "keep-alive");
+    // header_map.insert("Priority", "u=0, i");
+    // header_map.insert("Sec-Fetch-Dest", "document");
+    // header_map.insert("Sec-Fetch-Mode", "navigate");
+    // header_map.insert("Sec-Fetch-Site", "same-origin");
+    // //header_map.insert("Sec-GPC", "1");
+    // header_map.insert("Upgrade-Insecure-Requests", "1");
 
-    let headers = Headers::new(serde_json::to_value(header_map).unwrap());
+    // let headers = Headers::new(serde_json::to_value(header_map).unwrap());
 
-    page.execute(SetExtraHttpHeadersParams::new(headers))
-        .await
-        .map_err(|error| IndexError::FailedToAddCustomHeaders { error: error.to_string() })?;
+    // page.execute(SetExtraHttpHeadersParams::new(headers))
+    //     .await
+    //     .map_err(|error| IndexError::FailedToAddCustomHeaders { error: error.to_string() })?;
 
-    page.execute(NavigateParams::builder().url(url).referrer(referer).build().unwrap())
-        .await
-        .map_err(|error| IndexError::FailedToOpenPage {
-            page: url.to_string(),
-            error,
-        })?;
-
-    // Wait for full page load before starting deadline
-    let mut load_events = page
-        .event_listener::<EventLoadEventFired>()
-        .await
-        .map_err(|error| IndexError::FailedToSubsribeToNetworkEvents { error })?;
-    load_events.next().await; // blocks until DOMContentLoaded fires
+    page.goto(url).await.map_err(|error| IndexError::FailedToOpenPage {
+        page: url.to_string(),
+        error: error,
+    })?;
 
     // Set a deadline
     let deadline = tokio::time::sleep(std::time::Duration::from_secs(timeout as u64));

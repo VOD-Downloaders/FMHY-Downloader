@@ -44,9 +44,15 @@ async fn main() -> Result<(), AppError> {
 
     trace!("Credentials: {:?}", creds);
 
-    let index_data = downloader::get_index("https://www.cineby.sc/tv/66732/1/1?play=true", &creds)
-        .await
-        .unwrap();
+    let index_data = loop {
+        match downloader::get_index("https://www.cineby.sc/tv/66732/1/1?play=true", &creds).await {
+            Ok(value) => break value, // exits loop, `result` = value
+            Err(e) => {
+                eprintln!("Error: {e}, retrying...");
+                // optionally: sleep, backoff, etc.
+            },
+        }
+    };
 
     let path = std::path::PathBuf::from("/segments.ts");
     downloader::download_file(index_data, &creds, path.as_path(), 5).unwrap();
