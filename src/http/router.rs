@@ -124,8 +124,4 @@ impl Router {
 
         router
     }
-
-    async fn greet_handler() -> response::Json<serde_json::Value> {
-        response::Json(json!({ "message": "Hello from Rust!" }))
-    }
 }
