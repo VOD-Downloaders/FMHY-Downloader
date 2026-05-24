@@ -70,7 +70,7 @@ FROM debian:bookworm-slim
 
 ARG PUID=1000
 ARG PGID=1000
-ARG TZ=Europe/Amsterdam
+ARG TZ=UTC
 
 ARG APP_BIN=vod_downloader
 ARG APP_USER=voddownloader
