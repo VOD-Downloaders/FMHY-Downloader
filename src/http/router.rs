@@ -1,18 +1,20 @@
 use core::fmt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use serde_json::json;
 use axum::{routing, response};
 
+use super::api;
 use super::super::env;
 
 /////////////////////////////////////////////////////
 // RouteError
 /////////////////////////////////////////////////////
 #[derive(Debug)]
-pub enum RouteError
-{
+pub enum RouteError {
     FailedToBind{ port: u16, error: std::io::Error },
 }
 
@@ -96,8 +98,7 @@ impl Router {
         }
     }
 
-    fn make_js(contents: String) -> ([(&'static str, &'static str); 1], String)
-    {
+    fn make_js(contents: String) -> ([(&'static str, &'static str); 1], String) {
         ([("content-type", "application/javascript")], contents)
     }
 
@@ -113,7 +114,10 @@ impl Router {
             .route("/index.js", routing::get(Self::make_js(index_js)))
 
             // Dynamic API calls
-            .route("/api/greet", routing::get(Self::greet_handler));
+            .route("/api/download", routing::post(api::post_download))
+
+            // State
+            .with_state(Arc::new(Mutex::new(api::AppState::new())));
 
         trace!("Created HTTP router.");
 

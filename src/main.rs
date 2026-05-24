@@ -40,17 +40,6 @@ async fn main() -> Result<(), AppError> {
 
     trace!("Env options: {:?}", env);
 
-    let creds = request::get_credentials(&env.flaresolverr_url, "https://cineby.sc").await.unwrap();
-
-    trace!("Credentials: {:?}", creds);
-
-    let index_data = downloader::get_index(&env, "https://www.cineby.sc/tv/66732/1/1?play=true", &creds)
-        .await
-        .unwrap();
-
-    let path = std::path::PathBuf::from("/output/segments.ts");
-    downloader::download_file(&env, &creds, index_data, path.as_path()).unwrap();
-
     let router = http::Router::new(env).await.map_err(|error| {
         return AppError::RouteError(error);
     })?;
