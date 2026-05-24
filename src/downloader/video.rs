@@ -1,5 +1,6 @@
 use core::fmt;
 
+use std::error::Error;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
@@ -8,7 +9,8 @@ use std::path::PathBuf;
 use reqwest::blocking::Client;
 
 use super::IndexData;
-use super::super::request::Credentials;
+use super::super::env;
+use super::super::request;
 
 /////////////////////////////////////////////////////
 // DownloadError
@@ -51,15 +53,23 @@ impl fmt::Display for DownloadError {
 /////////////////////////////////////////////////////
 // Download
 /////////////////////////////////////////////////////
-pub fn download_file(index: IndexData, credentials: &Credentials, output_file: &Path, connect_timeout_per_segment: u8) -> Result<(), DownloadError> {
-    let mut client = Client::builder()
-        .redirect(reqwest::redirect::Policy::limited(10))
-        .connect_timeout(std::time::Duration::from_secs(connect_timeout_per_segment as u64))
-        .user_agent(credentials.user_agent.clone())
-        .referer(false)
-        .build()
-        .map_err(|error| DownloadError::FailedToCreateClient { error: error.to_string() })?;
+pub fn download_file(
+    environment: &env::EnvOptions, index: IndexData, credentials: &request::Credentials, output_file: &Path,
+) -> Result<(), DownloadError> {
+    let build_client = || -> Result<Client, DownloadError> {
+        Client::builder()
+            .redirect(reqwest::redirect::Policy::limited(10))
+            .connect_timeout(std::time::Duration::from_secs(30))
+            .timeout(std::time::Duration::from_secs(environment.segment_download_timeout as u64))
+            .user_agent(credentials.user_agent.clone())
+            .referer(false)
+            .no_proxy()
+            .connection_verbose(true)
+            .build()
+            .map_err(|error| DownloadError::FailedToCreateClient { error: error.to_string() })
+    };
 
+    let mut client = build_client()?;
     let mut headers: reqwest::header::HeaderMap = reqwest::header::HeaderMap::new();
     headers.insert("Referer", index.referer.parse().unwrap());
 
@@ -73,17 +83,28 @@ pub fn download_file(index: IndexData, credentials: &Credentials, output_file: &
     for segment in index.files {
         let full_url = index.base_url.clone() + segment.as_str();
 
-        // TODO: parameters
-        let max_tries = 3;
         let mut last_error: Option<DownloadError> = None;
 
-        for attempt in 1..=max_tries {
-            match download_segment(full_url.as_str(), &mut client, headers.clone(), &mut file, output_file) {
+        for attempt in 1..=environment.segment_retry_attempts {
+            match download_segment(environment, full_url.as_str(), &mut client, headers.clone(), &mut file, output_file) {
                 Ok(_) => {
                     break;
                 },
                 Err(error) => {
-                    warning!("[Attempt {}/{}] For segment \"{}\" failed with error: {}.", attempt, max_tries, segment.as_str(), error);
+                    warning!(
+                        "[Attempt {}/{}] For segment \"{}\" failed with error: {}.",
+                        attempt,
+                        environment.segment_retry_attempts,
+                        segment.as_str(),
+                        error
+                    );
+
+                    if let DownloadError::FailedToStart { url: _, error: _ } = &error {
+                        // Might be a timeout, recreate the client
+                        // trace!("Segment failed with FailedToStart so recreating client...");
+                        //trace!("Client recreated successfully");
+                    }
+
                     last_error = Some(error);
                 },
             }
@@ -98,12 +119,20 @@ pub fn download_file(index: IndexData, credentials: &Credentials, output_file: &
 }
 
 fn download_segment(
-    url: &str, client: &mut Client, headers: reqwest::header::HeaderMap, output_file: &mut File, file_path: &Path,
+    _environment: &env::EnvOptions, url: &str, client: &mut Client, headers: reqwest::header::HeaderMap, output_file: &mut File, file_path: &Path,
 ) -> Result<(), DownloadError> {
-    let response = client.get(url).headers(headers).send().map_err(|error| DownloadError::FailedToStart {
-        url: url.to_string(),
-        error: error.to_string(),
+    trace!("Sending GET request to: \"{}\" with these headers: {:?}", url, headers);
+
+    let response = client.get(url).headers(headers).send().map_err(|error| {
+        trace!("Failed to send request, error: {}, error source: {:?}", error, error.source());
+
+        return DownloadError::FailedToStart {
+            url: url.to_string(),
+            error: error.to_string(),
+        };
     })?;
+
+    trace!("Response status: {}", response.status());
 
     if !response.status().is_success() {
         return Err(DownloadError::RequestFailed {
@@ -114,6 +143,7 @@ fn download_segment(
 
     match response.bytes() {
         Ok(bytes) => {
+            trace!("Received {} bytes, writing to: {}", bytes.len(), file_path.display());
             output_file.write_all(&bytes).map_err(|error| {
                 return DownloadError::FailedToWriteBytes {
                     file: file_path.to_path_buf(),

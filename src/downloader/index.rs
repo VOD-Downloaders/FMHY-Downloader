@@ -8,11 +8,12 @@ use chromiumoxide::{
     error::CdpError,
 };
 use futures::StreamExt;
+use reqwest::header;
 
 use super::super::request;
+use super::super::env;
 
 const CHROMIUM_PATH: &'static str = "/usr/lib/chromium/chromium";
-const TIMEOUT: u8 = 6; // Seconds
 
 /////////////////////////////////////////////////////
 // IndexError
@@ -72,7 +73,7 @@ pub struct IndexData {
 /////////////////////////////////////////////////////
 // Index
 /////////////////////////////////////////////////////
-pub async fn get_index(url: &str, credentials: &request::Credentials) -> Result<IndexData, IndexError> {
+pub async fn get_index(environment: &env::EnvOptions, url: &str, credentials: &request::Credentials) -> Result<IndexData, IndexError> {
     let referer = url
         .find("://")
         .and_then(|pos| url[pos + 3..].find('/').map(|p| pos + 3 + p))
@@ -81,7 +82,25 @@ pub async fn get_index(url: &str, credentials: &request::Credentials) -> Result<
 
     trace!("Attempting to get index.m3u(8) file...");
 
-    let request = get_index_request(url, credentials, TIMEOUT, referer.as_str()).await?; // TODO: Timeout parameter somehow
+    let mut request = None;
+    let mut last_error = None;
+
+    for attempt in 1..=environment.max_index_find_attempts {
+        match get_index_request(environment, url, credentials, referer.as_str()).await {
+            Ok(value) => {
+                request = Some(value);
+                break;
+            },
+            Err(error) => {
+                warning!("[Attempt {}/{}] Failed to find m3u(8) with error: {}", attempt, environment.max_index_find_attempts, error);
+                last_error = Some(error);
+            },
+        }
+    }
+
+    let Some(request) = request else {
+        return Err(last_error.unwrap());
+    };
 
     let mut base_url: String = String::new();
     if (request.url.as_str().contains("http://") || request.url.as_str().contains("https://"))
@@ -108,7 +127,7 @@ pub async fn get_index(url: &str, credentials: &request::Credentials) -> Result<
 }
 
 async fn get_index_request(
-    url: &str, credentials: &request::Credentials, timeout: u8, referer: &str,
+    environment: &env::EnvOptions, url: &str, credentials: &request::Credentials, referer: &str,
 ) -> Result<chromiumoxide::cdp::browser_protocol::network::Request, IndexError> {
     let user_agent = "--user-agent=".to_string() + credentials.user_agent.as_str();
 
@@ -159,23 +178,24 @@ async fn get_index_request(
         .map_err(|error| return IndexError::FailedToSubsribeToNetworkEvents { error: error })?;
 
     // TODO: Maybe add cookies from credentials
-    // let mut header_map = HashMap::new();
+    let mut header_map = HashMap::new();
     // header_map.insert("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
     // header_map.insert("Accept-Language", "en-GB,en;q=0.9");
     // header_map.insert("Accept-Encoding", "gzip, deflate, br, zstd");
-    // header_map.insert("Connection", "keep-alive");
+    header_map.insert("Connection", "keep-alive");
     // header_map.insert("Priority", "u=0, i");
     // header_map.insert("Sec-Fetch-Dest", "document");
     // header_map.insert("Sec-Fetch-Mode", "navigate");
     // header_map.insert("Sec-Fetch-Site", "same-origin");
-    // //header_map.insert("Sec-GPC", "1");
+    // header_map.insert("Sec-GPC", "1");
     // header_map.insert("Upgrade-Insecure-Requests", "1");
+    header_map.insert("Referer", referer);
 
-    // let headers = Headers::new(serde_json::to_value(header_map).unwrap());
+    let headers = Headers::new(serde_json::to_value(header_map).unwrap());
 
-    // page.execute(SetExtraHttpHeadersParams::new(headers))
-    //     .await
-    //     .map_err(|error| IndexError::FailedToAddCustomHeaders { error: error.to_string() })?;
+    page.execute(SetExtraHttpHeadersParams::new(headers))
+        .await
+        .map_err(|error| IndexError::FailedToAddCustomHeaders { error: error.to_string() })?;
 
     page.goto(url).await.map_err(|error| IndexError::FailedToOpenPage {
         page: url.to_string(),
@@ -183,7 +203,7 @@ async fn get_index_request(
     })?;
 
     // Set a deadline
-    let deadline = tokio::time::sleep(std::time::Duration::from_secs(timeout as u64));
+    let deadline = tokio::time::sleep(std::time::Duration::from_secs(environment.index_find_timeout as u64));
     tokio::pin!(deadline);
 
     let mut index_request = None;
@@ -201,7 +221,7 @@ async fn get_index_request(
                 }
             }
             _ = &mut deadline => {
-                warning!("Capture deadline of {} seconds elapsed before parsing all requests.", timeout);
+                warning!("Capture deadline of {} seconds elapsed before parsing all requests.", environment.index_find_timeout);
                 break;
             }
         }
