@@ -48,7 +48,7 @@ async fn main() -> Result<(), AppError> {
         .await
         .unwrap();
 
-    let path = std::path::PathBuf::from("/files/segments.ts");
+    let path = std::path::PathBuf::from("/output/segments.ts");
     downloader::download_file(&env, &creds, index_data, path.as_path()).unwrap();
 
     let router = http::Router::new(env).await.map_err(|error| {

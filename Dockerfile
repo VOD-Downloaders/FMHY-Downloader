@@ -68,9 +68,20 @@ RUN cargo build --release
 ###############################################################################
 FROM debian:bookworm-slim
 
-ARG APP_USER=voddownloader
+ARG PUID=1000
+ARG PGID=1000
+ARG TZ=Europe/Amsterdam
+
 ARG APP_BIN=vod_downloader
+ARG APP_USER=voddownloader
 ARG WEBUI_PORT=8080
+
+ENV PUID=${PUID} \
+    PGID=${PGID} \
+    TZ=${TZ} \
+    APP_USER=${APP_USER} \
+    APP_BIN=${APP_BIN} \
+    WEBUI_PORT=${WEBUI_PORT}
 
 # Bring in the dummy packages
 COPY --from=dummy-builder /*.deb /tmp/
@@ -88,36 +99,32 @@ RUN dpkg -i /tmp/libgl1-mesa-dri.deb \
         # Virtual framebuffer — lets Chromium think there's a display
         xvfb \
         xauth \
-        # dumb-init: PID 1 that reaps zombie Chromium subprocesses properly
-        dumb-init \
         # Utilities
         ca-certificates \
         curl \
         procps \
+		gosu \
     # Purge hardware-video-decode libs (unused in headless, saves ~20 MB)
     && rm -f /usr/lib/x86_64-linux-gnu/libmfxhw* \
     && rm -f /usr/lib/x86_64-linux-gnu/mfx/* \
     # Clean up apt artefacts and temp debs
     && rm -rf /var/lib/apt/lists/* /tmp/*.deb \
-    # Create a non-root user for the app
-    && useradd --home-dir /app --shell /bin/sh --create-home ${APP_USER} \
     # Move chromedriver next to the app
-    && mv /usr/bin/chromedriver /app/chromedriver \
-    # Config volume directory
-    && mkdir /config \
-    && chown -R ${APP_USER}:${APP_USER} /app /config
+    && mv /usr/bin/chromedriver /app/chromedriver
 
 # Copy the compiled Rust binary from the build stage
 COPY --from=rust-builder /build/target/release/${APP_BIN} /app/${APP_BIN}
-RUN chmod +x /app/${APP_BIN} \
-    && chown ${APP_USER}:${APP_USER} /app/${APP_BIN}
+RUN chmod +x /app/${APP_BIN} 
 
 # Copy web files
 COPY web/ ./web
 
-VOLUME /config
+# Copy entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-USER ${APP_USER}
+# Create a config directory and make it the cwd
+VOLUME /config
 
 # Chromium writes crash reports here; create it upfront to avoid runtime errors
 RUN mkdir -p "/app/.config/chromium/Crash Reports/pending"
@@ -126,6 +133,5 @@ EXPOSE ${WEBUI_PORT}
 
 # HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 CMD curl -f http://localhost:8080/health || exit 1
 
-# dumb-init as PID 1 ensures clean signal forwarding and zombie reaping
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/app/vod_downloader"]
