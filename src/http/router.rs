@@ -115,6 +115,7 @@ impl Router {
 
             // Dynamic API calls
             .route("/api/download", routing::post(api::post_download))
+            .route("/api/downloadStatus/{id}", routing::get(api::get_download_status))
 
             // State
             .with_state(Arc::new(Mutex::new(api::AppState::new())));

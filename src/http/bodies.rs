@@ -7,10 +7,18 @@ use axum::{
 /////////////////////////////////////////////////////
 // Requests
 /////////////////////////////////////////////////////
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 pub struct DownloadRequest {
     pub input_url: String,
     pub output_file: String,
+}
+
+/////////////////////////////////////////////////////
+// Paths
+/////////////////////////////////////////////////////
+#[derive(Deserialize)]
+pub struct DownloadStatusPath {
+    pub id: u32,
 }
 
 /////////////////////////////////////////////////////
@@ -37,6 +45,19 @@ pub struct DownloadResponse {
 }
 
 impl IntoResponse for DownloadResponse {
+    fn into_response(self) -> response::Response {
+        (self.status, response::Json(self)).into_response()
+    }
+}
+
+#[derive(Serialize)]
+pub struct DownloadStatusResponse {
+    #[serde(skip)]
+    pub status: StatusCode,
+    pub status_message: String,
+}
+
+impl IntoResponse for DownloadStatusResponse {
     fn into_response(self) -> response::Response {
         (self.status, response::Json(self)).into_response()
     }
