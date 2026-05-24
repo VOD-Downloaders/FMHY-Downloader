@@ -23,9 +23,6 @@ pub enum DownloadError {
 impl fmt::Display for DownloadError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            DownloadError::FailedToCreateClient { error } => {
-                write!(f, "Failed to create HTTP client with error: {}", error)
-            },
             DownloadError::FailedToStart { url, error } => {
                 write!(f, "Failed to start downloading data from \"{}\" with error: {}", url, error)
             },
@@ -34,9 +31,6 @@ impl fmt::Display for DownloadError {
             },
             DownloadError::RequestFailed { url, exit_code } => {
                 write!(f, "Request to \"{}\" failed with exit code: {}", url, exit_code)
-            },
-            DownloadError::FailedToReadBytes { url, error } => {
-                write!(f, "Failed to read the bytes from \"{}\"'s response, error: {}", url, error)
             },
             DownloadError::FailedToWriteBytes { file, error } => {
                 write!(f, "Failed to write bytes to \"{}\" due to error: {}", file.display(), error)
@@ -98,13 +92,15 @@ fn download_segment(
     let connect_timeout = environment.segment_download_timeout.to_string();
     let max_timeout = environment.segment_download_timeout.to_string();
 
+    trace!("Sending GET request to \"{}\".", url);
+
     let output = std::process::Command::new("curl")
         .args([
             "--silent",
             "--fail",
             "--connect-timeout",
             connect_timeout.as_str(),
-            "--max-timeout",
+            "--max-time",
             max_timeout.as_str(),
             "-H",
             referer_header.as_str(),
@@ -115,10 +111,13 @@ fn download_segment(
             url,
         ])
         .output()
-        .map_err(|e| DownloadError::FailedToStart {
+        .map_err(|error| DownloadError::FailedToStart {
             url: url.to_string(),
-            error: e.to_string(),
+            error: error.to_string(),
         })?;
+
+    trace!("GET request exited with status: {}", output.status);
+    trace!("GET request output: {}", String::from_utf8_lossy(&output.stderr));
 
     if !output.status.success() {
         return Err(DownloadError::RequestFailed {
@@ -127,9 +126,9 @@ fn download_segment(
         });
     }
 
-    output_file.write_all(&output.stdout).map_err(|e| DownloadError::FailedToWriteBytes {
+    output_file.write_all(&output.stdout).map_err(|error| DownloadError::FailedToWriteBytes {
         file: file_path.to_path_buf(),
-        error: e.to_string(),
+        error: error.to_string(),
     })?;
 
     Ok(())
