@@ -1,12 +1,9 @@
 use core::fmt;
 
-use std::error::Error;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
-
-use reqwest::blocking::Client;
 
 use super::IndexData;
 use super::super::env;
@@ -17,11 +14,9 @@ use super::super::request;
 /////////////////////////////////////////////////////
 #[derive(Debug)]
 pub enum DownloadError {
-    FailedToCreateClient { error: String },
     FailedToStart { url: String, error: String },
     FailedToOpenOutputFile { file: PathBuf, error: String },
     RequestFailed { url: String, exit_code: i32 },
-    FailedToReadBytes { url: String, error: String },
     FailedToWriteBytes { file: PathBuf, error: String },
 }
 
@@ -54,25 +49,8 @@ impl fmt::Display for DownloadError {
 // Download
 /////////////////////////////////////////////////////
 pub fn download_file(
-    environment: &env::EnvOptions, index: IndexData, credentials: &request::Credentials, output_file: &Path,
+    environment: &env::EnvOptions, credentials: &request::Credentials, index: IndexData, output_file: &Path,
 ) -> Result<(), DownloadError> {
-    let build_client = || -> Result<Client, DownloadError> {
-        Client::builder()
-            .redirect(reqwest::redirect::Policy::limited(10))
-            .connect_timeout(std::time::Duration::from_secs(30))
-            .timeout(std::time::Duration::from_secs(environment.segment_download_timeout as u64))
-            .user_agent(credentials.user_agent.clone())
-            .referer(false)
-            .no_proxy()
-            .connection_verbose(true)
-            .build()
-            .map_err(|error| DownloadError::FailedToCreateClient { error: error.to_string() })
-    };
-
-    let mut client = build_client()?;
-    let mut headers: reqwest::header::HeaderMap = reqwest::header::HeaderMap::new();
-    headers.insert("Referer", index.referer.parse().unwrap());
-
     let mut file = OpenOptions::new().create(true).append(true).open(output_file).map_err(|error| {
         return DownloadError::FailedToOpenOutputFile {
             file: output_file.to_path_buf(),
@@ -86,7 +64,7 @@ pub fn download_file(
         let mut last_error: Option<DownloadError> = None;
 
         for attempt in 1..=environment.segment_retry_attempts {
-            match download_segment(environment, full_url.as_str(), &mut client, headers.clone(), &mut file, output_file) {
+            match download_segment(environment, credentials, full_url.as_str(), index.referer.as_str(), &mut file, output_file) {
                 Ok(_) => {
                     break;
                 },
@@ -119,42 +97,46 @@ pub fn download_file(
 }
 
 fn download_segment(
-    _environment: &env::EnvOptions, url: &str, client: &mut Client, headers: reqwest::header::HeaderMap, output_file: &mut File, file_path: &Path,
+    environment: &env::EnvOptions, credentials: &request::Credentials, url: &str, referer: &str, output_file: &mut File, file_path: &Path,
 ) -> Result<(), DownloadError> {
-    trace!("Sending GET request to: \"{}\" with these headers: {:?}", url, headers);
+    let referer_header = String::from("Referer: ") + referer;
+    let user_agent_header = String::from("User-Agent: ") + credentials.user_agent.as_str();
+    let connect_timeout = environment.segment_download_timeout.to_string();
+    let max_timeout = environment.segment_download_timeout.to_string();
 
-    let response = client.get(url).headers(headers).send().map_err(|error| {
-        trace!("Failed to send request, error: {}, error source: {:?}", error, error.source());
-
-        return DownloadError::FailedToStart {
+    let output = std::process::Command::new("curl")
+        .args([
+            "--silent",
+            "--fail",
+            "--connect-timeout",
+            connect_timeout.as_str(),
+            "--max-timeout",
+            max_timeout.as_str(),
+            "-H",
+            referer_header.as_str(),
+            "-H",
+            user_agent_header.as_str(),
+            "--output",
+            "-", // write to stdout
+            url,
+        ])
+        .output()
+        .map_err(|e| DownloadError::FailedToStart {
             url: url.to_string(),
-            error: error.to_string(),
-        };
-    })?;
+            error: e.to_string(),
+        })?;
 
-    trace!("Response status: {}", response.status());
-
-    if !response.status().is_success() {
+    if !output.status.success() {
         return Err(DownloadError::RequestFailed {
             url: url.to_string(),
-            exit_code: response.status().as_u16() as i32,
+            exit_code: output.status.code().unwrap_or(-1),
         });
     }
 
-    match response.bytes() {
-        Ok(bytes) => {
-            trace!("Received {} bytes, writing to: {}", bytes.len(), file_path.display());
-            output_file.write_all(&bytes).map_err(|error| {
-                return DownloadError::FailedToWriteBytes {
-                    file: file_path.to_path_buf(),
-                    error: error.to_string(),
-                };
-            })?;
-            Ok(())
-        },
-        Err(error) => Err(DownloadError::FailedToReadBytes {
-            url: url.to_string(),
-            error: error.to_string(),
-        }),
-    }
+    output_file.write_all(&output.stdout).map_err(|e| DownloadError::FailedToWriteBytes {
+        file: file_path.to_path_buf(),
+        error: e.to_string(),
+    })?;
+
+    Ok(())
 }
