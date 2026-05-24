@@ -1,18 +1,18 @@
 ###############################################################################
-# Build dummy .deb packages to satisfy Chromium's dependency tree (without the hundreds of MB)
+# Build dummy .deb packages to satisfy Chromium's dependencies (without the MB's)
 # Borrowed from: https://github.com/FlareSolverr/FlareSolverr
 ###############################################################################
 FROM debian:bookworm-slim AS dummy-builder
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends equivs \
-    # --- Dummy libgl1-mesa-dri (GPU mesa driver, not needed in headless) ---
+    # Dummy libgl1-mesa-dri (GPU mesa driver, not needed in headless)
     && equivs-control libgl1-mesa-dri \
     && printf 'Section: misc\nPriority: optional\nStandards-Version: 3.9.2\nPackage: libgl1-mesa-dri\nVersion: 99.0.0\nDescription: Dummy package for libgl1-mesa-dri\n' \
         >> libgl1-mesa-dri \
     && equivs-build libgl1-mesa-dri \
     && mv libgl1-mesa-dri_*.deb /libgl1-mesa-dri.deb \
-    # --- Dummy adwaita-icon-theme (GTK icons, irrelevant for headless) ---
+    # Dummy adwaita-icon-theme (GTK icons, irrelevant for headless)
     && equivs-control adwaita-icon-theme \
     && printf 'Section: misc\nPriority: optional\nStandards-Version: 3.9.2\nPackage: adwaita-icon-theme\nVersion: 99.0.0\nDescription: Dummy package for adwaita-icon-theme\n' \
         >> adwaita-icon-theme \
@@ -45,14 +45,16 @@ FROM chef AS planner
 RUN mkdir src && echo 'fn main() {}' > src/main.rs
 COPY Cargo.lock .
 COPY Cargo.toml .
+
 RUN cargo chef prepare --recipe-path recipe.json
  
 ###############################################################################
-# Build the depdencies when Cargo.toml + Cargo.lock change
+# Build the dependencies when Cargo.toml + Cargo.lock change
 ###############################################################################
 FROM chef AS rust-builder
  
 COPY --from=planner /build/recipe.json recipe.json
+
 RUN cargo chef cook --release --recipe-path recipe.json
  
 ###############################################################################
@@ -61,6 +63,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY src/ ./src
 COPY Cargo.lock .
 COPY Cargo.toml .
+
 RUN cargo build --release
 
 ###############################################################################
@@ -107,7 +110,7 @@ RUN dpkg -i /tmp/libgl1-mesa-dri.deb \
     # Purge hardware-video-decode libs (unused in headless, saves ~20 MB)
     && rm -f /usr/lib/x86_64-linux-gnu/libmfxhw* \
     && rm -f /usr/lib/x86_64-linux-gnu/mfx/* \
-    # Clean up apt artefacts and temp debs
+    # Clean up temporary files
     && rm -rf /var/lib/apt/lists/* /tmp/*.deb \
     # Move chromedriver next to the app
     && mv /usr/bin/chromedriver /app/chromedriver
