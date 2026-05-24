@@ -1,5 +1,6 @@
 use core::fmt;
 
+use std::error::Error;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
@@ -45,12 +46,20 @@ impl fmt::Display for DownloadError {
 pub fn download_file(
     environment: &env::EnvOptions, credentials: &request::Credentials, index: IndexData, output_file: &Path,
 ) -> Result<(), DownloadError> {
+    trace!("Opening file \"{}\" for writing...", output_file.display());
+
     let mut file = OpenOptions::new().create(true).append(true).open(output_file).map_err(|error| {
+        trace!("Failed to open \"{}\", error: {:?}, source: {:?}", output_file.display(), error, error.source());
+
         return DownloadError::FailedToOpenOutputFile {
             file: output_file.to_path_buf(),
             error: error.to_string(),
         };
     })?;
+
+    trace!("File \"{}\" successfully opened.", output_file.display());
+
+    info!("Downloading to \"{}\"...", output_file.display());
 
     for segment in index.files {
         let full_url = index.base_url.clone() + segment.as_str();

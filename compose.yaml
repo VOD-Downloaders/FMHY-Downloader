@@ -2,6 +2,8 @@ services:
   vod_downloader:
     build: .
     container_name: vod_downloader
+    volumes:
+      - ./files:/files
     environment:
       - LOG_LEVEL=info
       - FLARESOLVERR_URL=http://flaresolverr:8191/v1
