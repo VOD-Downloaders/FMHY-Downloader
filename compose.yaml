@@ -20,7 +20,7 @@ services:
       - LOG_LEVEL=info
     healthcheck:
       # curl https://www.google.com checks internet connectivity instead of ping and nslookup, because this container doesn't have them
-      test: sh -c "curl https://www.google.com && curl -s http://localhost:8191 && curl -s http://localhost:8191/health"
+      test: sh -c "curl https://www.google.com && curl http://localhost:8191 && curl http://localhost:8191/health"
       interval: 5s # Check every 5s once started
       timeout: 10s
       retries: 3
