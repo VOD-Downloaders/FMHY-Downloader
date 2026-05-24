@@ -77,12 +77,6 @@ pub fn download_file(
                         error
                     );
 
-                    if let DownloadError::FailedToStart { url: _, error: _ } = &error {
-                        // Might be a timeout, recreate the client
-                        // trace!("Segment failed with FailedToStart so recreating client...");
-                        //trace!("Client recreated successfully");
-                    }
-
                     last_error = Some(error);
                 },
             }
