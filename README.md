@@ -7,7 +7,11 @@ A docker container for downloading VODs off of certain freemediaheckyeah sites.
 
 ## Features
 
-- // TODO: ...
+- VOD Indexing from various [freemediaheckyeah](https://fmhy.net/video) sites. // TODO
+- (Bulk) VOD Downloading from same [freemediaheckyeah](https://fmhy.net/video) sites.
+- Easy navigatable WebUI
+- VOD Validation // TODO
+- Prowlarr indexer API // TODO
 
 ## Usage
 
@@ -15,9 +19,11 @@ A docker container for downloading VODs off of certain freemediaheckyeah sites.
 
 ## Contributing
 
-Contributions are highly appreciated (especially to the [fronted](#Fronted) and [documentation](#Documentation)).  
+Contributions are highly appreciated (especially to the [fronted](#fronted-html-css-js) and [documentation](#documentation-markdown)).  
 
 ### Backend (Rust, Docker)
+
+To contribute to the backend follow these steps:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/my-change`)
@@ -29,7 +35,8 @@ Contributions are highly appreciated (especially to the [fronted](#Fronted) and 
 
 ### Fronted (HTML, CSS, JS)
 
-Contributions to the WebUI are highly appreciated. 
+Contributions to the WebUI are highly appreciated.  
+To contribute to the fronted follow these steps:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/my-change`)
@@ -39,12 +46,6 @@ Contributions to the WebUI are highly appreciated.
 ### Documentation (Markdown)
 
 Contributions to the Documentation are highly appreciated, add your files to the [`doc/`](./doc) folder.
-
-### Guidelines
-
-- Keep the webui user-friendly.
-- Prefer returning `Result` types over panicking.
-- New dependencies should be justified since I want to minimize the attack surface of the container.
 
 ## Third-Party Libraries
 
