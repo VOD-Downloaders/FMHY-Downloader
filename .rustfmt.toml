@@ -12,8 +12,8 @@ use_small_heuristics = "Default"
 max_width = 150
 fn_call_width = 150
 
-brace_style = "AlwaysNextLine" # NIGHTLY
-control_brace_style = "AlwaysNextLine" # NIGHTLY
+brace_style = "SameLineWhere" # NIGHTLY
+control_brace_style = "AlwaysSameLine" # NIGHTLY
 
 trailing_comma = "Vertical"
 match_block_trailing_comma = true

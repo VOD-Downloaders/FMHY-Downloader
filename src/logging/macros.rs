@@ -17,7 +17,11 @@ macro_rules! log {
     }};
 }
 
-#[macro_export] macro_rules! trace { ($fmt:literal $(, $arg:expr)*) => {{ use crate::logging::LogLevel; log!(LogLevel::Trace, $fmt $(, $arg)*) }}; }
-#[macro_export] macro_rules! info  { ($fmt:literal $(, $arg:expr)*) => {{ use crate::logging::LogLevel; log!(LogLevel::Info,  $fmt $(, $arg)*) }}; }
-#[macro_export] macro_rules! warning  { ($fmt:literal $(, $arg:expr)*) => {{ use crate::logging::LogLevel; log!(LogLevel::Warn,  $fmt $(, $arg)*) }}; }
-#[macro_export] macro_rules! error { ($fmt:literal $(, $arg:expr)*) => {{ use crate::logging::LogLevel; log!(LogLevel::Error, $fmt $(, $arg)*) }}; }
+#[macro_export]
+macro_rules! trace { ($fmt:literal $(, $arg:expr)*) => {{ use crate::logging::LogLevel; log!(LogLevel::Trace, $fmt $(, $arg)*) }}; }
+#[macro_export]
+macro_rules! info  { ($fmt:literal $(, $arg:expr)*) => {{ use crate::logging::LogLevel; log!(LogLevel::Info,  $fmt $(, $arg)*) }}; }
+#[macro_export]
+macro_rules! warning  { ($fmt:literal $(, $arg:expr)*) => {{ use crate::logging::LogLevel; log!(LogLevel::Warn,  $fmt $(, $arg)*) }}; }
+#[macro_export]
+macro_rules! error { ($fmt:literal $(, $arg:expr)*) => {{ use crate::logging::LogLevel; log!(LogLevel::Error, $fmt $(, $arg)*) }}; }
