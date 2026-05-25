@@ -7,7 +7,7 @@ use axum::{
 /////////////////////////////////////////////////////
 // Requests
 /////////////////////////////////////////////////////
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct DownloadRequest {
     pub input_url: String,
     pub output_file: String,
@@ -18,7 +18,7 @@ pub struct DownloadRequest {
 /////////////////////////////////////////////////////
 #[derive(Deserialize)]
 pub struct DownloadStatusPath {
-    pub id: u32,
+    pub id: u64,
 }
 
 /////////////////////////////////////////////////////

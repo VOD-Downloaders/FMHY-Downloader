@@ -39,13 +39,13 @@ pub struct Router {
 }
 
 impl Router {
-    pub async fn new(options: env::EnvOptions) -> Result<Self, RouteError> {
-        let address = "0.0.0.0:".to_string() + options.webui_port.to_string().as_str();
-        let listener = tokio::net::TcpListener::bind(address.as_str()).await.map_err(|error| { return RouteError::FailedToBind { port: options.webui_port, error: error }})?;
+    pub async fn new(environment: env::EnvOptions) -> Result<Self, RouteError> {
+        let address = "0.0.0.0:".to_string() + environment.webui_port.to_string().as_str();
+        let listener = tokio::net::TcpListener::bind(address.as_str()).await.map_err(|error| { return RouteError::FailedToBind { port: environment.webui_port, error: error }})?;
 
         info!("HTTP server listening on {}.", address.as_str());
 
-        let router = Self::init_router();
+        let router = Self::init_router(environment);
 
         Ok(Self {
             router: router,
@@ -102,7 +102,7 @@ impl Router {
         ([("content-type", "application/javascript")], contents)
     }
 
-    fn init_router() -> axum::Router {
+    fn init_router(environment: env::EnvOptions) -> axum::Router {
         let index = Self::get_file_contents(PathBuf::from("web/index.html").as_path());
         let index_js = Self::get_file_contents(PathBuf::from("web/index.js").as_path());
 
@@ -118,7 +118,7 @@ impl Router {
             .route("/api/downloadStatus/{id}", routing::get(api::get_download_status))
 
             // State
-            .with_state(Arc::new(Mutex::new(api::AppState::new())));
+            .with_state(Arc::new(Mutex::new(api::AppState::new(environment))));
 
         trace!("Created HTTP router.");
 
