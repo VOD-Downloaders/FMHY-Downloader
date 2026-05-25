@@ -17,6 +17,15 @@ A docker container for downloading VODs off of certain freemediaheckyeah sites.
 
 // TODO: ...
 
+## API
+
+The docker container exposes an HTTP server with callable API functions, listed below:
+
+| Type | Endpoint | Description | Input | Output |
+|---|---|---|---|---|
+| `POST` | `/api/download` | Start VOD download | { input_url, output_file } | { TODO } |
+| `GET` | `/api/downloadStatus/{id}` | Retrieve status of running download | - | { TODO } |
+
 ## Contributing
 
 Contributions are highly appreciated (especially to the [fronted](#fronted-html-css-js) and [documentation](#documentation-markdown)).  
