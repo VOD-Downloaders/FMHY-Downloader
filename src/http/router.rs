@@ -65,13 +65,13 @@ impl Router {
         let ctrl_c = async {
             tokio::signal::ctrl_c()
                 .await
-                .expect("failed to install Ctrl+C handler");
+                .expect("Failed to install Ctrl+C handler");
         };
 
         #[cfg(unix)]
         let terminate = async {
             tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-                .expect("failed to install signal handler")
+                .expect("Failed to install terminate signal handler")
                 .recv()
                 .await;
         };
