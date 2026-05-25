@@ -15,15 +15,30 @@ A docker container for downloading VODs off of certain freemediaheckyeah sites.
 
 ## Contributing
 
-Contributions are welcome.
+Contributions are highly appreciated (especially to the [fronted](#Fronted) and [documentation](#Documentation)).  
+
+### Backend (Rust, Docker)
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/my-change`)
-3. Make your changes and ensure everything compiles (`cargo build`)
+3. Make your changes and ensure everything compiles (`cargo build` && `docker build .`)
 4. Run tests (`cargo test`)
 5. Run the linter (`cargo clippy`)
 6. Format your code (`cargo +nightly fmt` from [`rustfmt`](https://github.com/rust-lang/rustfmt))
 7. Open a pull request with a clear description of what you changed and why
+
+### Fronted (HTML, CSS, JS)
+
+Contributions to the WebUI are highly appreciated. 
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-change`)
+3. Make your changes
+4. Open a pull request with a clear description of what you changed and why
+
+### Documentation (Markdown)
+
+Contributions to the Documentation are highly appreciated, add your files to the [`doc/`](./doc) folder.
 
 ### Guidelines
 
