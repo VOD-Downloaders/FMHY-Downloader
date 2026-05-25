@@ -1,10 +1,12 @@
 use core::fmt;
 
 use std::error::Error;
-use std::fs::{File, OpenOptions};
-use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+
+use tokio::fs::{File, OpenOptions};
+use tokio::io::AsyncWriteExt;
+use tokio::process::Command;
 
 use super::IndexData;
 use super::super::env;
@@ -43,12 +45,12 @@ impl fmt::Display for DownloadError {
 /////////////////////////////////////////////////////
 // Download
 /////////////////////////////////////////////////////
-pub fn download_file(
+pub async fn download_file(
     environment: &env::EnvOptions, credentials: &request::Credentials, index: IndexData, output_file: &Path,
 ) -> Result<(), DownloadError> {
     trace!("Opening file \"{}\" for writing...", output_file.display());
 
-    let mut file = OpenOptions::new().create(true).append(true).open(output_file).map_err(|error| {
+    let mut file = OpenOptions::new().create(true).append(true).open(output_file).await.map_err(|error| {
         trace!("Failed to open \"{}\", error: {:?}, source: {:?}", output_file.display(), error, error.source());
 
         return DownloadError::FailedToOpenOutputFile {
@@ -67,7 +69,7 @@ pub fn download_file(
         let mut last_error: Option<DownloadError> = None;
 
         for attempt in 1..=environment.segment_retry_attempts {
-            match download_segment(environment, credentials, full_url.as_str(), index.referer.as_str(), &mut file, output_file) {
+            match download_segment(environment, credentials, full_url.as_str(), index.referer.as_str(), &mut file, output_file).await {
                 Ok(_) => {
                     break;
                 },
@@ -93,7 +95,7 @@ pub fn download_file(
     Ok(())
 }
 
-fn download_segment(
+async fn download_segment(
     environment: &env::EnvOptions, credentials: &request::Credentials, url: &str, referer: &str, output_file: &mut File, file_path: &Path,
 ) -> Result<(), DownloadError> {
     let referer_header = String::from("Referer: ") + referer;
@@ -103,7 +105,7 @@ fn download_segment(
 
     trace!("Sending GET request to \"{}\".", url);
 
-    let output = std::process::Command::new("curl")
+    let output = Command::new("curl")
         .args([
             "--silent",
             "--fail",
@@ -120,13 +122,13 @@ fn download_segment(
             url,
         ])
         .output()
+        .await
         .map_err(|error| DownloadError::FailedToStart {
             url: url.to_string(),
             error: error.to_string(),
         })?;
 
-    trace!("GET request exited with status: {}", output.status);
-    trace!("GET request output: {}", String::from_utf8_lossy(&output.stderr));
+    trace!("GET request exited with status: {}, output: {}", output.status, String::from_utf8_lossy(&output.stderr));
 
     if !output.status.success() {
         return Err(DownloadError::RequestFailed {
@@ -135,10 +137,13 @@ fn download_segment(
         });
     }
 
-    output_file.write_all(&output.stdout).map_err(|error| DownloadError::FailedToWriteBytes {
-        file: file_path.to_path_buf(),
-        error: error.to_string(),
-    })?;
+    output_file
+        .write_all(&output.stdout)
+        .await
+        .map_err(|error| DownloadError::FailedToWriteBytes {
+            file: file_path.to_path_buf(),
+            error: error.to_string(),
+        })?;
 
     Ok(())
 }

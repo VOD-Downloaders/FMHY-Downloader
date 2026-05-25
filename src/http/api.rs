@@ -60,7 +60,9 @@ pub async fn post_download(
             .unwrap();
 
         let path = std::path::PathBuf::from(payload.output_file);
-        let _ = downloader::download_file(&environment, &credentials, index_data, path.as_path());
+        let _ = downloader::download_file(&environment, &credentials, index_data, path.as_path())
+            .await
+            .unwrap();
     });
 
     // TODO: Lock again and put state in AppState
