@@ -20,7 +20,13 @@ jobs:
           node-version: "lts/*"
 
       - name: Install ESLint
-        run: npm install --global eslint @eslint/js
+        run: npm install --save-dev eslint @eslint/js
+        working-directory: web
 
       - name: Run ESLint
-        run: eslint "web/**/*.js"
+        run: npx eslint "**/*.js"
+        working-directory: web
+
+      - name: Run ESLint
+        run: eslint "**/*.js"
+        working-directory: web
