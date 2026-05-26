@@ -45,7 +45,7 @@ jobs:
           node-version: "lts/*"
 
       - name: Install ESLint
-        run: npm install --save-dev eslint @eslint/js globals
+        run: npm install --save-dev eslint @eslint/js globals @microsoft/eslint-formatter-sarif
         working-directory: web
 
       - name: Run ESLint
