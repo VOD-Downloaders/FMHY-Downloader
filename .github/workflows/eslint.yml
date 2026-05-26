@@ -26,7 +26,3 @@ jobs:
       - name: Run ESLint
         run: npx eslint "**/*.js"
         working-directory: web
-
-      - name: Run ESLint
-        run: eslint "**/*.js"
-        working-directory: web
