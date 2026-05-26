@@ -1,7 +1,6 @@
 document.getElementById("dl-btn").addEventListener("click", async () => {
     const url    = document.getElementById("url-input").value.trim();
     const name   = document.getElementById("name-input").value.trim();
-    const status = document.getElementById("status");
     const btn    = document.getElementById("dl-btn");
 
     if (!url)  { setStatus("Please enter a URL.",       "error"); return; }
