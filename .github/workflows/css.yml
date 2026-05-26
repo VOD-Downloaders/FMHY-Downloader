@@ -22,9 +22,8 @@ jobs:
           node-version: "lts/*"
 
       - name: Install Stylelint
-        run: npm install --no-save stylelint stylelint-config-standard
+        run: npm install --save-dev stylelint stylelint-config-standard
 
       - name: Run Stylelint
-        run: npx stylelint "**/*.css" --config '{"extends":"stylelint-config-standard"}'
-        continue-on-error: true
+        run: npx stylelint "**/*.css"
         working-directory: web
