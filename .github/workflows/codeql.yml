@@ -1,15 +1,15 @@
-name: "Code quality check"
+name: Code quality check
 
 on:
   push:
-    branches: [ "main", "dev" ]
+    branches: [ "main", "dev", "feature/**", "fix/**" ]
   pull_request:
     branches: [ "main", "dev" ]
 
 jobs:
-  analyze:
-    name: Analyze (${{ matrix.language }})
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+  static-analysis:
+    name: Static CodeQL for (${{ matrix.language }})
+    runs-on: ubuntu-latest
     permissions:
       security-events: write
       packages: read
@@ -40,3 +40,5 @@ jobs:
       uses: github/codeql-action/analyze@v4
       with:
         category: "/language:${{matrix.language}}"
+
+  

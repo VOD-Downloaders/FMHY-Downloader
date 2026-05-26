@@ -2,7 +2,7 @@ name: Docker code qualiy check
 
 on:
   push:
-    branches: [ "main", "dev" ]
+    branches: [ "main", "dev", "feature/**", "fix/**" ]
   pull_request:
     branches: [ "main", "dev" ]
 

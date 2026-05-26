@@ -2,9 +2,9 @@ name: Rust clippy
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "dev", "feature/**", "fix/**" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
 
 env:
   CARGO_TERM_COLOR: always
