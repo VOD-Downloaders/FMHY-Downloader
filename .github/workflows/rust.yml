@@ -1,4 +1,4 @@
-name: Rust build & test
+name: Rust
 
 on:
   push:
@@ -6,21 +6,87 @@ on:
   pull_request:
     branches: [ "main", "dev" ]
 
-permissions:
-  contents: read
-
-env:
-  CARGO_TERM_COLOR: always
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
-  build:
+  lint-codeql:
+    name: Lint (CodeQL)
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v4
+      with:
+        languages: rust
+        build-mode: none
+
+    - name: Analyze code
+      uses: github/codeql-action/analyze@v4
+      with:
+        category: "/language:actions"
+
+  lint-clippy:
+    name: Lint (Clippy)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1 # UNMAINTAINED # set-output warning
+        with:
+          profile: minimal
+          toolchain: stable
+          components: clippy
+          override: true
+
+      - name: Install clippy
+        run: cargo install clippy-sarif sarif-fmt
+
+      - name: Run clippy
+        run:
+          cargo clippy
+          --all-features
+          --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
+        continue-on-error: true
+
+      - name: Upload results
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: rust-clippy-results.sarif
+          wait-for-processing: true
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
     - name: Build
       run: cargo build --verbose
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
     - name: Run tests
       run: cargo test --verbose
