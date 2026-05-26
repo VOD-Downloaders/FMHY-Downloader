@@ -1,4 +1,4 @@
-name: Lint docker
+name: Docker code qualiy check
 
 on:
   push:

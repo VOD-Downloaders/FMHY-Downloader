@@ -1,0 +1,26 @@
+name: Javascript code quality check
+
+on:
+  push:
+    branches: [ "main", "dev", "feature/**", "fix/**" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+  eslint:
+    name: Check Javascript quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Install ESLint
+        run: npm install --global eslint @eslint/js
+
+      - name: Run ESLint
+        run: eslint "web/**/*.js"
