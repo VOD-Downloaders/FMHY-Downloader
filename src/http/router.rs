@@ -102,16 +102,22 @@ impl Router {
         ([("content-type", "application/javascript")], contents)
     }
 
+    fn make_css(contents: String) -> ([(&'static str, &'static str); 1], String) {
+        ([("content-type", "text/css")], contents)
+    }
+
     fn init_router(environment: env::EnvOptions) -> axum::Router {
         let index = Self::get_file_contents(PathBuf::from("web/index.html").as_path());
+        let style_css = Self::get_file_contents(PathBuf::from("web/style.css").as_path());
         let index_js = Self::get_file_contents(PathBuf::from("web/index.js").as_path());
 
         let router = axum::Router::new()
             // Static routes
             .route("/", routing::get(response::Html(index)))
             
-            // Logic files
+            // Static files
             .route("/index.js", routing::get(Self::make_js(index_js)))
+            .route("/styles.css", routing::get(Self::make_css(style_css)))
 
             // Dynamic API calls
             .route("/api/download", routing::post(api::post_download))
