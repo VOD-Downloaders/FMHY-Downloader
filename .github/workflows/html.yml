@@ -1,0 +1,30 @@
+name: HTML
+
+on:
+  push:
+    branches: [ "main", "dev", "feature/**", "fix/**" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+  lint-htmlhint:
+    name: Lint (HTMLHint)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Install HTMLHint
+        run: npm install --no-save htmlhint
+
+      - name: Run HTMLHint
+        run: npx htmlhint "**/*.html"
+        continue-on-error: true
+        working-directory: web

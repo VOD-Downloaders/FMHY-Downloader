@@ -1,0 +1,30 @@
+name: CSS
+
+on:
+  push:
+    branches: [ "main", "dev", "feature/**", "fix/**" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+  lint-stylelint:
+    name: Lint (Stylelint)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Install Stylelint
+        run: npm install --no-save stylelint stylelint-config-standard
+
+      - name: Run Stylelint
+        run: npx stylelint "**/*.css" --config '{"extends":"stylelint-config-standard"}'
+        continue-on-error: true
+        working-directory: web
