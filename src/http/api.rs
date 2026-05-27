@@ -54,10 +54,21 @@ pub async fn post_download(
         error: "Invalid URL passed in".to_string(),
     })?;
 
+    let referer = {
+        let scheme = url.scheme();
+        let host = url.host_str().ok_or(ErrorResponse {
+            status: StatusCode::BAD_REQUEST,
+            error: "Failed to retrieve domain from URL".to_string(),
+        })?;
+
+        Url::parse(&format!("{}://{}", scheme, host)).map_err(|_| ErrorResponse {
+            status: StatusCode::BAD_REQUEST,
+            error: "Failed to retrieve domain from URL".to_string(),
+        })?
+    };
+
     tokio::spawn(async move {
-        let credentials = request::get_credentials(&environment.flaresolverr_url, &Url::parse("https://www.cineby.sc/").unwrap())
-            .await
-            .unwrap(); // TODO: Auto generate
+        let credentials = request::get_credentials(&environment.flaresolverr_url, &referer).await.unwrap();
 
         let index_data = downloader::get_index(&environment, &url, &credentials).await.unwrap();
 
