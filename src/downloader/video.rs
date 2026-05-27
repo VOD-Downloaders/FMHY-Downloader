@@ -53,10 +53,10 @@ pub async fn download_file(
     let mut file = OpenOptions::new().create(true).append(true).open(output_file).await.map_err(|error| {
         trace!("Failed to open \"{}\", error: {:?}, source: {:?}", output_file.display(), error, error.source());
 
-        return DownloadError::FailedToOpenOutputFile {
+        DownloadError::FailedToOpenOutputFile {
             file: output_file.to_path_buf(),
             error: error.to_string(),
-        };
+        }
     })?;
 
     trace!("File \"{}\" successfully opened.", output_file.display());

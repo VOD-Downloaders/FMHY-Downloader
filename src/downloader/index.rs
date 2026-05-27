@@ -4,16 +4,15 @@ use std::collections::HashMap;
 use chromiumoxide::{
     browser::{Browser, BrowserConfig},
     cdp::browser_protocol::network::{EnableParams, EventRequestWillBeSent, SetExtraHttpHeadersParams, Headers},
-    cdp::browser_protocol::page::{EventLoadEventFired, NavigateParams},
+    // cdp::browser_protocol::page::{EventLoadEventFired, NavigateParams},
     error::CdpError,
 };
 use futures::StreamExt;
-use reqwest::header;
 
 use super::super::request;
 use super::super::env;
 
-const CHROMIUM_PATH: &'static str = "/usr/lib/chromium/chromium";
+const CHROMIUM_PATH: &str = "/usr/lib/chromium/chromium";
 
 /////////////////////////////////////////////////////
 // IndexError
@@ -112,8 +111,8 @@ pub async fn get_index(environment: &env::EnvOptions, url: &str, credentials: &r
     trace!("Sending index request to \"{}\", base_url: {}, referer: {}.", url, base_url, referer);
 
     let index_data = request::get_file_contents(request.url.as_str(), credentials, referer.as_str())
-        .map_err(|error| return IndexError::FailedToDownloadIndexM3U { error: error })?;
-    let index_contents = String::from_utf8(index_data).map_err(|error| return IndexError::FailedToReadIndexM3U { error: error.to_string() })?;
+        .map_err(|error| IndexError::FailedToDownloadIndexM3U { error: error })?;
+    let index_contents = String::from_utf8(index_data).map_err(|error| IndexError::FailedToReadIndexM3U { error: error.to_string() })?;
 
     trace!("Index M3U: {}", index_contents);
 
@@ -144,38 +143,36 @@ async fn get_index_request(
                 user_agent.as_str(),
             ])
             .build()
-            .map_err(|error| return IndexError::FailedToStartBrowser { error: error })?,
+            .map_err(|error| IndexError::FailedToStartBrowser { error: error })?,
     )
     .await
     .map_err(|error| IndexError::FailedToStartBrowser { error: error.to_string() })?;
 
     // The handler drives the browser's event loop
     let handler_task = tokio::spawn(async move {
-        while let Some(e) = handler.next().await {
-            if e.is_err() {
-                error!("Failed to handle event with error: {}", e.unwrap_err());
+        while let Some(event) = handler.next().await {
+            if let Err(error) = event {
+                error!("Failed to handle event with error: {}", error);
                 break;
             }
         }
     });
 
-    let page = browser.new_page("about:blank").await.map_err(|error| {
-        return IndexError::FailedToOpenPage {
-            page: url.to_string(),
-            error: error,
-        };
+    let page = browser.new_page("about:blank").await.map_err(|error| IndexError::FailedToOpenPage {
+        page: url.to_string(),
+        error: error,
     })?;
 
     // Start monitoring
-    page.execute(EnableParams::default()).await.map_err(|error| {
-        return IndexError::FailedToStartNetworkMonitoring { error: error };
-    })?;
+    page.execute(EnableParams::default())
+        .await
+        .map_err(|error| IndexError::FailedToStartNetworkMonitoring { error: error })?;
 
     // Subscribe to request events
     let mut requests = page
         .event_listener::<EventRequestWillBeSent>()
         .await
-        .map_err(|error| return IndexError::FailedToSubsribeToNetworkEvents { error: error })?;
+        .map_err(|error| IndexError::FailedToSubsribeToNetworkEvents { error: error })?;
 
     // TODO: Maybe add cookies from credentials
     let mut header_map = HashMap::new();

@@ -3,12 +3,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use serde_json::json;
 use axum::{
     extract,
     extract::{State, Path},
-    response,
-    http::{header, StatusCode},
+    http::{StatusCode},
 };
 
 use super::bodies::*;

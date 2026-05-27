@@ -154,7 +154,7 @@ impl EnvOptions {
             return Ok(None);
         };
 
-        let port = port.parse::<u16>().map_err(|_error| return EnvError::InvalidWebUIPort { port: port })?;
+        let port = port.parse::<u16>().map_err(|_error| EnvError::InvalidWebUIPort { port: port })?;
 
         Ok(Some(port))
     }
@@ -166,7 +166,7 @@ impl EnvOptions {
 
         let threads = threads
             .parse::<u8>()
-            .map_err(|_error| return EnvError::InvalidThreadCount { thread_count: threads })?;
+            .map_err(|_error| EnvError::InvalidThreadCount { thread_count: threads })?;
 
         if threads == 0 {
             return Err(EnvError::InvalidThreadCount {
@@ -185,11 +185,11 @@ impl EnvOptions {
                     });
                 }
 
-                return Ok(Some(threads));
+                Ok(Some(threads))
             },
             Err(error) => {
                 warning!("Failed to retrieve maximum thread count with error: {}", error);
-                return Ok(Some(threads));
+                Ok(Some(threads))
             },
         }
     }
@@ -201,7 +201,7 @@ impl EnvOptions {
 
         let index_find_timeout = index_find_timeout
             .parse::<u8>()
-            .map_err(|_error| return EnvError::InvalidIndexTimeout { timeout: index_find_timeout })?;
+            .map_err(|_error| EnvError::InvalidIndexTimeout { timeout: index_find_timeout })?;
 
         if index_find_timeout == 0 {
             return Err(EnvError::InvalidIndexTimeout {
@@ -217,10 +217,8 @@ impl EnvOptions {
             return Ok(None);
         };
 
-        let max_index_attempts = max_index_attempts.parse::<u8>().map_err(|_error| {
-            return EnvError::InvalidIndexFindAttempts {
-                attempts: max_index_attempts,
-            };
+        let max_index_attempts = max_index_attempts.parse::<u8>().map_err(|_error| EnvError::InvalidIndexFindAttempts {
+            attempts: max_index_attempts,
         })?;
 
         if max_index_attempts == 0 {
@@ -237,10 +235,8 @@ impl EnvOptions {
             return Ok(None);
         };
 
-        let segment_download_timeout = segment_download_timeout.parse::<u8>().map_err(|_error| {
-            return EnvError::InvalidSegmentTimeout {
-                timeout: segment_download_timeout,
-            };
+        let segment_download_timeout = segment_download_timeout.parse::<u8>().map_err(|_error| EnvError::InvalidSegmentTimeout {
+            timeout: segment_download_timeout,
         })?;
 
         if segment_download_timeout == 0 {
@@ -257,11 +253,11 @@ impl EnvOptions {
             return Ok(None);
         };
 
-        let segment_retry_attempts = segment_retry_attempts.parse::<u8>().map_err(|_error| {
-            return EnvError::InvalidSegmentRetryAttempts {
+        let segment_retry_attempts = segment_retry_attempts
+            .parse::<u8>()
+            .map_err(|_error| EnvError::InvalidSegmentRetryAttempts {
                 attempts: segment_retry_attempts,
-            };
-        })?;
+            })?;
 
         if segment_retry_attempts == 0 {
             return Err(EnvError::InvalidSegmentRetryAttempts {

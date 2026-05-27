@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use serde_json::json;
 use axum::{routing, response};
 
 use super::api;
@@ -39,12 +38,12 @@ pub struct Router {
 impl Router {
     pub async fn new(environment: env::EnvOptions) -> Result<Self, RouteError> {
         let address = "0.0.0.0:".to_string() + environment.webui_port.to_string().as_str();
-        let listener = tokio::net::TcpListener::bind(address.as_str()).await.map_err(|error| {
-            return RouteError::FailedToBind {
+        let listener = tokio::net::TcpListener::bind(address.as_str())
+            .await
+            .map_err(|error| RouteError::FailedToBind {
                 port: environment.webui_port,
                 error: error,
-            };
-        })?;
+            })?;
 
         info!("HTTP server listening on {}.", address.as_str());
 
