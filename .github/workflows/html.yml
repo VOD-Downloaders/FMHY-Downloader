@@ -25,5 +25,5 @@ jobs:
         run: npm install --no-save htmlhint
 
       - name: Run HTMLHint
-        run: npx htmlhint "**/*.html"
+        run: npx htmlhint "**/*.html" --config .htmlhintrc.config
         working-directory: web
