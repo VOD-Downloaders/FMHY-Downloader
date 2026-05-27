@@ -10,8 +10,8 @@ use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
 use super::IndexData;
-use super::super::env;
-use super::super::request;
+use super::super::super::env;
+use super::super::super::request;
 
 /////////////////////////////////////////////////////
 // DownloadError
