@@ -1,5 +1,6 @@
 use core::fmt;
 
+use url::Url;
 use serde::Deserialize;
 
 /////////////////////////////////////////////////////
@@ -32,7 +33,7 @@ impl fmt::Display for RequestCredentialsError {
 // Responses
 /////////////////////////////////////////////////////
 #[derive(Debug, Deserialize)]
-pub struct Credentials {
+struct FlaresolverrSolution {
     pub url: String,
     pub status: u32,
     pub cookies: Vec<Cookie>,
@@ -43,9 +44,9 @@ pub struct Credentials {
 }
 
 #[derive(Debug, Deserialize)]
-struct FlareSolverrResponse {
+struct FlaresolverrResponse {
     // status: String,
-    solution: Credentials,
+    solution: FlaresolverrSolution,
 }
 
 #[derive(Debug, Deserialize)]
@@ -55,9 +56,27 @@ pub struct Cookie {
 }
 
 /////////////////////////////////////////////////////
+// Credentials
+/////////////////////////////////////////////////////
+#[derive(Debug)]
+pub struct Credentials {
+    pub cookies: Vec<Cookie>,
+    pub user_agent: String,
+}
+
+impl Credentials {
+    pub fn from(solution: FlaresolverrSolution) -> Self {
+        Self {
+            cookies: solution.cookies,
+            user_agent: solution.user_agent,
+        }
+    }
+}
+
+/////////////////////////////////////////////////////
 // Request
 /////////////////////////////////////////////////////
-pub async fn get_credentials(flaresolverr_url: &str, url: &str) -> Result<Credentials, RequestCredentialsError> {
+pub async fn get_credentials(flaresolverr_url: &Url, url: &Url) -> Result<Credentials, RequestCredentialsError> {
     trace!("Attempting to get credentials for \"{}\"...", url);
 
     let body = serde_json::json!({
@@ -68,7 +87,7 @@ pub async fn get_credentials(flaresolverr_url: &str, url: &str) -> Result<Creden
 
     let client = reqwest::Client::new();
     let response = client
-        .post(flaresolverr_url)
+        .post(flaresolverr_url.as_str())
         .json(&body)
         .send()
         .await
@@ -82,7 +101,7 @@ pub async fn get_credentials(flaresolverr_url: &str, url: &str) -> Result<Creden
         .text()
         .await
         .map_err(|_error| RequestCredentialsError::FailedToGetBodyFromRequest)?;
-    let parsed: FlareSolverrResponse = serde_json::from_str(&body).map_err(|_error| RequestCredentialsError::FailedToParseBody)?;
+    let parsed: FlaresolverrResponse = serde_json::from_str(&body).map_err(|_error| RequestCredentialsError::FailedToParseBody)?;
 
-    Ok(parsed.solution)
+    Ok(Credentials::from(parsed.solution))
 }

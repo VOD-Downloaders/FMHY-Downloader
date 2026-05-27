@@ -4,6 +4,7 @@ use std::error::Error;
 use std::path::Path;
 use std::path::PathBuf;
 
+use url::Url;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
@@ -64,12 +65,18 @@ pub async fn download_file(
     info!("Downloading to \"{}\"...", output_file.display());
 
     for segment in index.files {
-        let full_url = index.base_url.clone() + segment.as_str();
+        let segment_url = Url::parse(segment.as_str());
+        let full_url = {
+            match segment_url {
+                Ok(url) => url,
+                Err(_error) => index.base_url.join(segment.as_str()).unwrap(),
+            }
+        };
 
         let mut last_error: Option<DownloadError> = None;
 
         for attempt in 1..=environment.segment_retry_attempts {
-            match download_segment(environment, credentials, full_url.as_str(), index.referer.as_str(), &mut file, output_file).await {
+            match download_segment(environment, credentials, &full_url, &index.referer, &mut file, output_file).await {
                 Ok(_) => {
                     break;
                 },
@@ -96,14 +103,14 @@ pub async fn download_file(
 }
 
 async fn download_segment(
-    environment: &env::EnvOptions, credentials: &request::Credentials, url: &str, referer: &str, output_file: &mut File, file_path: &Path,
+    environment: &env::EnvOptions, credentials: &request::Credentials, url: &Url, referer: &Url, output_file: &mut File, file_path: &Path,
 ) -> Result<(), DownloadError> {
-    let referer_header = String::from("Referer: ") + referer;
+    let referer_header = String::from("Referer: ") + referer.as_str();
     let user_agent_header = String::from("User-Agent: ") + credentials.user_agent.as_str();
     let connect_timeout = environment.segment_download_timeout.to_string();
     let max_timeout = environment.segment_download_timeout.to_string();
 
-    trace!("Sending GET request to \"{}\".", url);
+    trace!("Sending GET request to \"{}\", with headers: [\"{}\", \"{}\"].", url, referer_header, user_agent_header);
 
     let output = Command::new("curl")
         .args([
@@ -119,7 +126,7 @@ async fn download_segment(
             user_agent_header.as_str(),
             "--output",
             "-", // write to stdout
-            url,
+            url.as_str(),
         ])
         .output()
         .await

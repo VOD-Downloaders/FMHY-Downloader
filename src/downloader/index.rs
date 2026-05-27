@@ -1,6 +1,7 @@
 use core::fmt;
 use std::collections::HashMap;
 
+use url::Url;
 use chromiumoxide::{
     browser::{Browser, BrowserConfig},
     cdp::browser_protocol::network::{EnableParams, EventRequestWillBeSent, SetExtraHttpHeadersParams, Headers},
@@ -19,6 +20,7 @@ const CHROMIUM_PATH: &str = "/usr/lib/chromium/chromium";
 /////////////////////////////////////////////////////
 #[derive(Debug)]
 pub enum IndexError {
+    FailedToRetrieveDomainFromUrl { url: Url },
     FailedToStartBrowser { error: String },
     FailedToOpenPage { page: String, error: CdpError },
     FailedToStartNetworkMonitoring { error: CdpError },
@@ -32,6 +34,9 @@ pub enum IndexError {
 impl fmt::Display for IndexError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
+            IndexError::FailedToRetrieveDomainFromUrl { url } => {
+                write!(f, "Failed to retrieve the domain from \"{}\"", url)
+            },
             IndexError::FailedToStartBrowser { error } => {
                 write!(f, "Failed to start browser with error: {}", error)
             },
@@ -64,28 +69,29 @@ impl fmt::Display for IndexError {
 // IndexData
 /////////////////////////////////////////////////////
 pub struct IndexData {
-    pub base_url: String, // Can be empty for index files with full urls
+    pub base_url: Url,
     pub files: Vec<String>,
-    pub referer: String,
+    pub referer: Url,
 }
 
 /////////////////////////////////////////////////////
 // Index
 /////////////////////////////////////////////////////
-pub async fn get_index(environment: &env::EnvOptions, url: &str, credentials: &request::Credentials) -> Result<IndexData, IndexError> {
-    let referer = url
-        .find("://")
-        .and_then(|pos| url[pos + 3..].find('/').map(|p| pos + 3 + p))
-        .map(|pos| url[..=pos].to_string())
-        .unwrap_or_default();
-
+pub async fn get_index(environment: &env::EnvOptions, url: &Url, credentials: &request::Credentials) -> Result<IndexData, IndexError> {
     trace!("Attempting to get index.m3u(8) file...");
+
+    let referer = {
+        let scheme = url.scheme();
+        let host = url.host_str().ok_or(IndexError::FailedToRetrieveDomainFromUrl { url: url.clone() })?;
+
+        Url::parse(&format!("{}://{}", scheme, host)).map_err(|_| IndexError::FailedToRetrieveDomainFromUrl { url: url.clone() })?
+    };
 
     let mut request = None;
     let mut last_error = None;
 
     for attempt in 1..=environment.max_index_find_attempts {
-        match get_index_request(environment, url, credentials, referer.as_str()).await {
+        match get_index_request(environment, url, credentials, &referer).await {
             Ok(value) => {
                 request = Some(value);
                 break;
@@ -101,17 +107,13 @@ pub async fn get_index(environment: &env::EnvOptions, url: &str, credentials: &r
         return Err(last_error.unwrap());
     };
 
-    let mut base_url: String = String::new();
-    if (request.url.as_str().contains("http://") || request.url.as_str().contains("https://"))
-        && let Some(pos) = request.url.as_str().rfind('/')
-    {
-        base_url = request.url.as_str()[..=pos].to_string();
-    }
+    let request_url = Url::parse(request.url.as_str()).unwrap();
+    let base_url = request_url.join(".").unwrap(); // Goes up 1 level
 
-    trace!("Sending index request to \"{}\", base_url: {}, referer: {}.", url, base_url, referer);
+    trace!("Sending index retrieval request to \"{}\", base_url: {}, referer: {}.", request_url, base_url, referer);
 
-    let index_data = request::get_file_contents(request.url.as_str(), credentials, referer.as_str())
-        .map_err(|error| IndexError::FailedToDownloadIndexM3U { error: error })?;
+    let index_data =
+        request::get_file_contents(&request_url, credentials, &referer).map_err(|error| IndexError::FailedToDownloadIndexM3U { error: error })?;
     let index_contents = String::from_utf8(index_data).map_err(|error| IndexError::FailedToReadIndexM3U { error: error.to_string() })?;
 
     trace!("Index M3U: {}", index_contents);
@@ -126,7 +128,7 @@ pub async fn get_index(environment: &env::EnvOptions, url: &str, credentials: &r
 }
 
 async fn get_index_request(
-    environment: &env::EnvOptions, url: &str, credentials: &request::Credentials, referer: &str,
+    environment: &env::EnvOptions, url: &Url, credentials: &request::Credentials, referer: &Url,
 ) -> Result<chromiumoxide::cdp::browser_protocol::network::Request, IndexError> {
     let user_agent = "--user-agent=".to_string() + credentials.user_agent.as_str();
 
@@ -186,7 +188,7 @@ async fn get_index_request(
     // header_map.insert("Sec-Fetch-Site", "same-origin");
     // header_map.insert("Sec-GPC", "1");
     // header_map.insert("Upgrade-Insecure-Requests", "1");
-    header_map.insert("Referer", referer);
+    header_map.insert("Referer", referer.as_str());
 
     let headers = Headers::new(serde_json::to_value(header_map).unwrap());
 
@@ -194,7 +196,7 @@ async fn get_index_request(
         .await
         .map_err(|error| IndexError::FailedToAddCustomHeaders { error: error.to_string() })?;
 
-    page.goto(url).await.map_err(|error| IndexError::FailedToOpenPage {
+    page.goto(url.as_str()).await.map_err(|error| IndexError::FailedToOpenPage {
         page: url.to_string(),
         error: error,
     })?;

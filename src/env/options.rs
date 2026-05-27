@@ -1,6 +1,8 @@
 use core::fmt;
 use std::env;
 
+use url::Url;
+
 use super::super::logging::LogLevel;
 
 /////////////////////////////////////////////////////
@@ -9,7 +11,7 @@ use super::super::logging::LogLevel;
 #[derive(Debug, Clone)]
 pub enum EnvError {
     MissingFlaresolverrUrl,
-    FlaresolverrUrlNoHTTP { url: String },
+    InvalidFlaresolverrUrl { url: String, error: url::ParseError },
     InvalidLogLevel { log_level: String },
     InvalidWebUIPort { port: String },
     InvalidThreadCount { thread_count: String },
@@ -26,8 +28,8 @@ impl fmt::Display for EnvError {
             EnvError::MissingFlaresolverrUrl => {
                 write!(f, "FLARESOLVERR_URL is not set in the current environment.")
             },
-            EnvError::FlaresolverrUrlNoHTTP { url } => {
-                write!(f, "FLARESOLVERR_URL doesn't start with http or https, url: {}", url)
+            EnvError::InvalidFlaresolverrUrl { url, error } => {
+                write!(f, "FLARESOLVERR_URL is set to an invalid url \"{}\", error: {}", url, error)
             },
             EnvError::InvalidLogLevel { log_level } => {
                 write!(f, "LOG_LEVEL contains invalid data (must be \"debug\", \"info\", \"warning\" or \"error\". Received: {}", log_level)
@@ -63,7 +65,7 @@ impl fmt::Display for EnvError {
 #[derive(Debug, Clone)]
 pub struct EnvOptions {
     pub log_level: LogLevel,
-    pub flaresolverr_url: String,
+    pub flaresolverr_url: Url,
     pub webui_port: u16,
 
     pub download_threads: u8,
@@ -78,7 +80,7 @@ impl Default for EnvOptions {
     fn default() -> Self {
         Self {
             log_level: LogLevel::Info,
-            flaresolverr_url: "".to_string(),
+            flaresolverr_url: Url::parse("http://flaresolverr:8191/v1").unwrap(),
             webui_port: 8080,
 
             download_threads: 1,
@@ -108,7 +110,7 @@ impl EnvOptions {
 
         Ok(Self {
             log_level: log_level.unwrap_or(default.log_level),
-            flaresolverr_url: flaresolverr_url.to_string(),
+            flaresolverr_url: flaresolverr_url,
             webui_port: webui_port.unwrap_or(default.webui_port),
 
             download_threads: download_threads.unwrap_or(default.download_threads),
@@ -135,18 +137,19 @@ impl EnvOptions {
         }
     }
 
-    fn parse_flaresolverr_url() -> Result<String, EnvError> {
+    fn parse_flaresolverr_url() -> Result<Url, EnvError> {
         let Ok(flaresolverr_url) = env::var("FLARESOLVERR_URL") else {
             return Err(EnvError::MissingFlaresolverrUrl);
         };
 
-        if !flaresolverr_url.starts_with("http://") && !flaresolverr_url.starts_with("https://") {
-            return Err(EnvError::FlaresolverrUrlNoHTTP {
-                url: flaresolverr_url.to_string(),
-            });
-        }
+        let flaresolverr_url = Url::parse(flaresolverr_url.as_str()).map_err(|error| {
+            return EnvError::InvalidFlaresolverrUrl {
+                url: flaresolverr_url,
+                error: error,
+            };
+        })?;
 
-        Ok(flaresolverr_url.to_string())
+        Ok(flaresolverr_url)
     }
 
     fn parse_webui_port() -> Result<Option<u16>, EnvError> {

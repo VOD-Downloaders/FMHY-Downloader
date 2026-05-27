@@ -3,6 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use url::Url;
 use axum::{
     extract,
     extract::{State, Path},
@@ -48,14 +49,17 @@ pub async fn post_download(
         Arc::clone(&state.environment)
     };
 
+    let url = Url::parse(payload.input_url.as_str()).map_err(|_error| ErrorResponse {
+        status: StatusCode::BAD_REQUEST,
+        error: "Invalid URL passed in".to_string(),
+    })?;
+
     tokio::spawn(async move {
-        let credentials = request::get_credentials(environment.flaresolverr_url.as_str(), "https://www.cineby.sc/")
+        let credentials = request::get_credentials(&environment.flaresolverr_url, &Url::parse("https://www.cineby.sc/").unwrap())
             .await
             .unwrap(); // TODO: Auto generate
 
-        let index_data = downloader::get_index(&environment, payload.input_url.as_str(), &credentials)
-            .await
-            .unwrap();
+        let index_data = downloader::get_index(&environment, &url, &credentials).await.unwrap();
 
         let path = std::path::PathBuf::from(payload.output_file);
         let _ = downloader::download_file(&environment, &credentials, index_data, path.as_path())
