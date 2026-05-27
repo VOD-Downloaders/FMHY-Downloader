@@ -117,7 +117,7 @@ impl Router {
 
             // Static files
             .route("/index.js", routing::get(Self::make_js(index_js)))
-            .route("/styles.css", routing::get(Self::make_css(style_css)))
+            .route("/style.css", routing::get(Self::make_css(style_css)))
 
             // Dynamic API calls
             .route("/api/download", routing::post(api::post_download))
