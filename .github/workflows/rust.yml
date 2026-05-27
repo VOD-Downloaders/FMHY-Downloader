@@ -31,7 +31,6 @@ jobs:
 
   lint-clippy:
     name: Lint (Clippy)
-    needs: [build]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -47,9 +46,6 @@ jobs:
 
       - name: Install clippy
         run: cargo install clippy-sarif sarif-fmt
-
-      - name: Restore cache
-        uses: Swatinem/rust-cache@v2
 
       - name: Run clippy
         id: lint-job
@@ -99,15 +95,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Cache build
-      uses: Swatinem/rust-cache@v2
-
     - name: Build
       run: cargo build --verbose
 
   test:
     name: Test
-    needs: [build]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -116,9 +108,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    - name: Restore cache
-      uses: Swatinem/rust-cache@v2
 
     - name: Run tests
       run: cargo test --verbose
