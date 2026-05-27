@@ -13,6 +13,10 @@ A docker container for downloading VODs off of certain freemediaheckyeah sites.
 - VOD Validation // TODO
 - Prowlarr indexer API // TODO
 
+## Installation
+
+// TODO: ...
+
 ## Usage
 
 // TODO: ...

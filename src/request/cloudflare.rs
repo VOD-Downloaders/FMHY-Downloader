@@ -67,20 +67,22 @@ pub async fn get_credentials(flaresolverr_url: &str, url: &str) -> Result<Creden
     });
 
     let client = reqwest::Client::new();
-    let response = client.post(flaresolverr_url).json(&body).send().await.map_err(|error| {
-        return RequestCredentialsError::FailedToPOSTFlaresolverr { error: error.to_string() };
-    })?;
+    let response = client
+        .post(flaresolverr_url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|error| RequestCredentialsError::FailedToPOSTFlaresolverr { error: error.to_string() })?;
 
     let status = response.status();
 
     trace!("Request to \"{}\" exited with status: {}", url, status);
 
-    let body = response.text().await.map_err(|_error| {
-        return RequestCredentialsError::FailedToGetBodyFromRequest;
-    })?;
-    let parsed: FlareSolverrResponse = serde_json::from_str(&body).map_err(|_error| {
-        return RequestCredentialsError::FailedToParseBody;
-    })?;
+    let body = response
+        .text()
+        .await
+        .map_err(|_error| RequestCredentialsError::FailedToGetBodyFromRequest)?;
+    let parsed: FlareSolverrResponse = serde_json::from_str(&body).map_err(|_error| RequestCredentialsError::FailedToParseBody)?;
 
     Ok(parsed.solution)
 }

@@ -7,6 +7,9 @@ PUID=${PUID}
 PGID=${PGID}
 TZ=${TZ}
 
+CHOWN_CONFIG=${CHOWN_CONFIG}
+CHOWN_OUTPUT=${CHOWN_OUTPUT}
+
 APP_USER=${APP_USER}
 APP_BIN=${APP_BIN}
 
@@ -32,9 +35,16 @@ fi
 # --- Change ownership of APP_BIN ---
 chown ${APP_USER}:${APP_USER} /app/${APP_BIN}
 
-# --- Change owndership of output folder ---
+# --- Change ownership of output folder ---
+mkdir -p /config
 mkdir -p /output
-chown -R ${APP_USER}:${APP_USER} /output
+
+if [ $CHOWN_CONFIG ]; then
+  chown -R ${APP_USER}:${APP_USER} /config
+fi
+if [ $CHOWN_OUTPUT ]; then
+  chown -R ${APP_USER}:${APP_USER} /output
+fi
 
 # --- Drop privileges ---
 exec gosu "$PUID:$PGID" "$@"

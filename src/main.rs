@@ -31,18 +31,14 @@ async fn main() -> Result<(), AppError> {
     // Setup
     logging::add_sink(Box::new(logging::ConsoleSink::new(None)));
 
-    let env = env::EnvOptions::from_env().map_err(|error| {
-        return AppError::EnvError(error);
-    })?;
+    let env = env::EnvOptions::from_env().map_err(AppError::EnvError)?;
 
     logging::clear_sinks();
     logging::add_sink(Box::new(logging::ConsoleSink::new(Some(env.log_level.clone()))));
 
     trace!("Env options: {:?}", env);
 
-    let router = http::Router::new(env).await.map_err(|error| {
-        return AppError::RouteError(error);
-    })?;
+    let router = http::Router::new(env).await.map_err(AppError::RouteError)?;
     router.serve().await;
 
     Ok(())
