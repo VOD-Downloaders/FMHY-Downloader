@@ -49,6 +49,7 @@ jobs:
         working-directory: web
 
       - name: Run ESLint
+        id: lint-job
         run: npx eslint "**/*.js" --config .eslintrc.mjs --format @microsoft/eslint-formatter-sarif --output-file eslint-results.sarif
         continue-on-error: true
         working-directory: web
@@ -58,3 +59,7 @@ jobs:
         with:
           sarif_file: web/eslint-results.sarif
           wait-for-processing: true
+
+      - name: Fail on lint error
+        if: steps.lint-job.outcome == 'failure'
+        run: exit 1
