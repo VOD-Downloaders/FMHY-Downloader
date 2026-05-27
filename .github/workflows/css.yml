@@ -25,5 +25,5 @@ jobs:
         run: npm install --save-dev stylelint stylelint-config-standard
 
       - name: Run Stylelint
-        run: npx stylelint "**/*.css" --config .eslintrc.mjs
+        run: npx stylelint "**/*.css" --config .stylelintrc.json
         working-directory: web
