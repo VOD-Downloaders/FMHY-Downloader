@@ -49,10 +49,12 @@ jobs:
 
       - name: Run clippy
         id: lint-job
-        run:
-          cargo clippy
-          --all-features
-          --message-format=json -- -D warnings | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
+        run: |
+          cargo clippy \
+            --all-features \
+            --message-format=json -- -D warnings \
+            | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
+          exit ${PIPESTATUS[0]}
         continue-on-error: true
 
       - name: Upload results
