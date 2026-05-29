@@ -1,5 +1,31 @@
+# Rust build artifacts
 target/
+
+# Git
 .git/
 .github/
 .gitignore
+
+# Docs
 README.md
+doc/
+
+# Output directory
+output/
+
+# Docker files
+Dockerfile
+compose.yaml
+.dockerignore
+
+# Editor artifacts
+.idea/
+.vscode/
+*.iml
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Misc
+*.log
