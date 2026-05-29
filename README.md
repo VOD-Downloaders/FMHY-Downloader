@@ -65,6 +65,7 @@ Contributions to the Documentation are highly appreciated, add your files to the
 | Crate | Version | License | Purpose |
 |---|---|---|---|
 | [colored](https://crates.io/crates/colored) | 3.1 | MPL-2.0 | Coloured printing |
+| [thiserror](https://crates.io/crates/thiserror) | 2.0 | MIT / Apache-2.0 | Easy error creation |
 | [chrono](https://crates.io/crates/chrono) | 0.4 | MIT / Apache-2.0 | Timestamp handling |
 | [tokio](https://crates.io/crates/tokio) | 1 | MIT | A runtime for writing reliable asynchronous applications |
 | [serde](https://crates.io/crates/serde) | 1 | MIT / Apache-2.0 | Serialization/deserialization framework |

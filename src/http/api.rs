@@ -13,7 +13,7 @@ use axum::{
 use super::bodies::*;
 use super::super::env;
 use super::super::request;
-use super::super::downloader;
+use super::super::download;
 
 /////////////////////////////////////////////////////
 // State
@@ -70,10 +70,10 @@ pub async fn post_download(
     tokio::spawn(async move {
         let credentials = request::get_credentials(&environment.flaresolverr_url, &referer).await.unwrap();
 
-        let index_data = downloader::get_index(&environment, &url, &credentials).await.unwrap();
+        let index_data = download::get_index(&environment, &url, &credentials).await.unwrap();
 
         let path = std::path::PathBuf::from(payload.output_file);
-        let _ = downloader::download_file(&environment, &credentials, index_data, path.as_path())
+        let _ = download::download_file(&environment, &credentials, index_data, path.as_path())
             .await
             .unwrap();
     });

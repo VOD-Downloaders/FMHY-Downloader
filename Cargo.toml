@@ -9,6 +9,7 @@ repository = "https://github.com/VOD-Downloaders/VOD-Downloader"
 
 [dependencies]
 colored = "3.1"
+thiserror = "2"
 chrono = "0.4"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
