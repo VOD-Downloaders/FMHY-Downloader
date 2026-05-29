@@ -80,4 +80,4 @@ Contributions to the Documentation are highly appreciated, add your files to the
 
 ## License
 
-This project is licensed under the **GNU General Public License v2.0**. See [LICENSE](LICENSE.txt) for the full license text.
+This project is licensed under the **GNU Affero General Public License v3.0**. See [LICENSE](LICENSE.txt) for the full license text.
