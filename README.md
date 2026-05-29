@@ -1,6 +1,6 @@
-# VOD Downloader
+# FMHY Downloader
 
-A docker container for downloading VODs off of certain freemediaheckyeah sites.
+A docker container for downloading VODs off of certain [freemediaheckyeah](https://fmhy.net/video) sites.
 
 > [!WARNING]
 > This software is currently in alpha stages, there may be bugs and breaking changes to the API.
@@ -8,7 +8,7 @@ A docker container for downloading VODs off of certain freemediaheckyeah sites.
 ## Features
 
 - VOD Indexing from various [freemediaheckyeah](https://fmhy.net/video) sites. // TODO
-- (Bulk) VOD Downloading from same [freemediaheckyeah](https://fmhy.net/video) sites.
+- (Bulk) VOD Downloading from [freemediaheckyeah](https://fmhy.net/video) sites.
 - Easy navigatable WebUI
 - VOD Validation // TODO
 - Prowlarr indexer API // TODO
