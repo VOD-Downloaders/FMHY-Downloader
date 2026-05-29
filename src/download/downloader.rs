@@ -22,3 +22,5 @@ impl fmt::Display for DownloadError {
 pub trait Downloader {
     fn download(input_url: &Url) -> Result<(), DownloadError>;
 }
+
+// pub fn download_file();

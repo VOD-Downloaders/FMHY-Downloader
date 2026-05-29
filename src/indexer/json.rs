@@ -14,6 +14,5 @@ pub struct IndexerBody {
     pub url: Url,
     pub uses_cloudflare: bool,
 
-    #[serde(rename = "type")]
-    pub indexer_type: IndexerType,
+    pub specification: IndexerType,
 }
