@@ -1,7 +1,7 @@
 services:
-  vod_downloader:
+  fmhy_downloader:
     build: .
-    container_name: vod_downloader
+    container_name: fmhy_downloader
     volumes:
       - ./output:/output
     environment:

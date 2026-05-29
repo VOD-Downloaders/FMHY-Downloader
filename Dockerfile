@@ -58,7 +58,7 @@ COPY --from=planner /build/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
  
 ###############################################################################
-# Compile actual vod_downloader
+# Compile actual fmhy_downloader
 ###############################################################################
 COPY src/ ./src
 COPY Cargo.lock .
@@ -78,8 +78,8 @@ ARG TZ=UTC
 ARG CHOWN_CONFIG=true
 ARG CHOWN_OUTPUT=true
 
-ARG APP_BIN=vod_downloader
-ARG APP_USER=voddownloader
+ARG APP_BIN=fmhy_downloader
+ARG APP_USER=fmhydownloader
 ARG WEBUI_PORT=8080
 
 ENV PUID=${PUID} \
@@ -142,4 +142,4 @@ EXPOSE ${WEBUI_PORT}
 # HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 CMD curl -f http://localhost:8080/health || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["/app/vod_downloader"]
+CMD ["/app/fmhy_downloader"]
