@@ -6,7 +6,6 @@ mod env;
 mod config;
 mod http;
 mod request;
-mod indexer;
 mod download;
 
 #[derive(Debug, Error)]

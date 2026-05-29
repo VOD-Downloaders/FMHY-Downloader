@@ -1,9 +1,7 @@
 mod version;
 mod state;
-mod indexers;
-mod configuration;
+mod indexer;
 
 pub use version::*;
 pub use state::*;
-pub use indexers::*;
-pub use configuration::*;
+pub use indexer::*;
