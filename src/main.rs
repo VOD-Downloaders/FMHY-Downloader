@@ -5,6 +5,7 @@ mod logging;
 mod env;
 mod http;
 mod request;
+mod indexer;
 mod download;
 
 #[derive(Debug)]
