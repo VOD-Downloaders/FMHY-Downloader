@@ -1,9 +1,9 @@
-use core::fmt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+use thiserror::Error;
 use axum::{routing, response};
 
 use super::api;
@@ -12,19 +12,10 @@ use super::super::env;
 /////////////////////////////////////////////////////
 // RouteError
 /////////////////////////////////////////////////////
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum RouteError {
+    #[error("Failed to bind to port {port} with error: {error}.")]
     FailedToBind { port: u16, error: std::io::Error },
-}
-
-impl fmt::Display for RouteError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            RouteError::FailedToBind { port, error } => {
-                write!(f, "Failed to bind to port {} with error: {}.", port, error)
-            },
-        }
-    }
 }
 
 /////////////////////////////////////////////////////

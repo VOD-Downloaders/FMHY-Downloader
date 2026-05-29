@@ -1,32 +1,18 @@
-use core::fmt;
-
+use thiserror::Error;
 use url::Url;
 use serde::Deserialize;
 
 /////////////////////////////////////////////////////
 // RequestError
 /////////////////////////////////////////////////////
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum RequestCredentialsError {
+    #[error("Failed to send request to flaresolverr with error: {error}.")]
     FailedToPOSTFlaresolverr { error: String },
+    #[error("Failed to access the body from flaresolverr request.")]
     FailedToGetBodyFromRequest,
+    #[error("Failed to parse the body from the flaresolverr request.")]
     FailedToParseBody,
-}
-
-impl fmt::Display for RequestCredentialsError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            RequestCredentialsError::FailedToPOSTFlaresolverr { error } => {
-                write!(f, "Failed to send request to flaresolverr with error: {}.", error)
-            },
-            RequestCredentialsError::FailedToGetBodyFromRequest => {
-                write!(f, "Failed to access the body from flaresolverr request.")
-            },
-            RequestCredentialsError::FailedToParseBody => {
-                write!(f, "Failed to parse the body from the flaresolverr request.")
-            },
-        }
-    }
 }
 
 /////////////////////////////////////////////////////
