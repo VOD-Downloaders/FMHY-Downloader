@@ -456,7 +456,9 @@ dependencies = [
  "serde",
  "serde_json",
  "symphonia",
+ "thiserror",
  "tokio",
+ "url",
 ]
 
 [[package]]
