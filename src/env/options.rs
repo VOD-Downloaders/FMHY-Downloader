@@ -129,7 +129,7 @@ impl EnvOptions {
         };
 
         match log_level.to_lowercase().as_str() {
-            "debug" => Ok(Some(LogLevel::Trace)),
+            "debug" | "trace" => Ok(Some(LogLevel::Trace)),
             "info" => Ok(Some(LogLevel::Info)),
             "warning" => Ok(Some(LogLevel::Warn)),
             "error" => Ok(Some(LogLevel::Error)),
