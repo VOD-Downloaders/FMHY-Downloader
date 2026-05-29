@@ -1,11 +1,11 @@
 [package]
-name = "vod_downloader"
-description = "vod_downloader is an application for downloading VODs off of certain freemediaheckyeah sites."
+name = "fmhy_downloader"
+description = "fmhy_downloader is an application for downloading VODs off of freemediaheckyeah sites."
 version = "0.1.0"
 edition = "2024"
 license = "AGPL-3.0-or-later"
 readme = "README.md"
-repository = "https://github.com/VOD-Downloaders/VOD-Downloader"
+repository = "https://github.com/VOD-Downloaders/FMHY-Downloader"
 
 [dependencies]
 colored = "3.1"
