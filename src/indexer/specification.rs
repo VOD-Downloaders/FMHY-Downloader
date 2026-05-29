@@ -1,9 +1,14 @@
+use serde::{Serialize, Deserialize};
+
 /////////////////////////////////////////////////////
 // IndexerType
 /////////////////////////////////////////////////////
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum IndexerType {
+    #[serde(rename = "index")]
     IndexInterception,
+
+    #[serde(rename = "mp4")]
     MP4Interception,
 }
 
