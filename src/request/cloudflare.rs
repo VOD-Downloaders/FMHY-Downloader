@@ -65,7 +65,7 @@ pub struct Credentials {
 }
 
 impl Credentials {
-    pub fn from(solution: FlaresolverrSolution) -> Self {
+    fn from(solution: FlaresolverrSolution) -> Self {
         Self {
             cookies: solution.cookies,
             user_agent: solution.user_agent,
