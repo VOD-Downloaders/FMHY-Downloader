@@ -5,7 +5,7 @@ mod logging;
 mod env;
 mod http;
 mod request;
-mod downloader;
+mod download;
 
 #[derive(Debug)]
 enum AppError {
