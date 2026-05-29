@@ -3,6 +3,7 @@ use thiserror::Error;
 #[macro_use]
 mod logging;
 mod env;
+mod config;
 mod http;
 mod request;
 mod indexer;
@@ -27,6 +28,9 @@ async fn main() -> Result<(), AppError> {
 
     trace!("Env options: {:?}", env);
 
+    // Config
+
+    // HTTP Router
     let router = http::Router::new(env).await.map_err(AppError::RouteError)?;
     router.serve().await;
 
