@@ -4,8 +4,6 @@ use std::path::PathBuf;
 use url::Url;
 use thiserror::Error;
 use futures::TryFutureExt;
-use tokio::fs::OpenOptions;
-use tokio::io::AsyncWriteExt;
 use serde::{Serialize, Deserialize};
 
 /////////////////////////////////////////////////////
