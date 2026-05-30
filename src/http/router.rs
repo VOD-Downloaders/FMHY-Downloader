@@ -9,6 +9,7 @@ use axum::{routing, response};
 
 use super::api;
 use super::super::env;
+use super::super::config;
 
 /////////////////////////////////////////////////////
 // RouteError
@@ -28,7 +29,7 @@ pub struct Router {
 }
 
 impl Router {
-    pub async fn new(environment: env::EnvOptions) -> Result<Self, RouteError> {
+    pub async fn new(environment: env::EnvOptions, state: config::State) -> Result<Self, RouteError> {
         let address = "0.0.0.0:".to_string() + environment.webui_port.to_string().as_str();
         let listener = tokio::net::TcpListener::bind(address.as_str())
             .await
@@ -39,7 +40,7 @@ impl Router {
 
         info!("HTTP server listening on {}.", address.as_str());
 
-        let router = Self::init_router(environment);
+        let router = Self::init_router(environment, state);
 
         Ok(Self {
             router: router,
@@ -98,7 +99,7 @@ impl Router {
         ([("content-type", "text/css")], contents)
     }
 
-    fn init_router(environment: env::EnvOptions) -> axum::Router {
+    fn init_router(environment: env::EnvOptions, state: config::State) -> axum::Router {
         let index = Self::get_file_contents(PathBuf::from("web/index.html").as_path());
         let style_css = Self::get_file_contents(PathBuf::from("web/style.css").as_path());
         let index_js = Self::get_file_contents(PathBuf::from("web/index.js").as_path());
@@ -113,11 +114,12 @@ impl Router {
 
             // Dynamic API calls
             .route("/health", routing::get(Self::health))
+            .route("/api/indexers", routing::get(api::get_indexers))
             .route("/api/download", routing::post(api::post_download))
             .route("/api/downloadStatus/{id}", routing::get(api::get_download_status))
 
             // State
-            .with_state(Arc::new(Mutex::new(api::AppState::new(environment))));
+            .with_state(Arc::new(Mutex::new(api::AppState::new(environment, state))));
 
         trace!("Created HTTP router.");
 

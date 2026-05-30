@@ -9,7 +9,7 @@ use serde::{Serialize, Deserialize};
 /////////////////////////////////////////////////////
 // IndexerBody
 /////////////////////////////////////////////////////
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Indexer {
     pub name: String,
     pub url: Url,
@@ -23,14 +23,14 @@ pub struct Indexer {
 /////////////////////////////////////////////////////
 // Specifications
 /////////////////////////////////////////////////////
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IndexSpecification {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IndexDownloadSpecification {
     pub wait_time: u32,
     pub retries: u32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MP4Specification {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MP4DownloadSpecification {
     pub wait_time: u32,
     pub retries: u32,
 }
@@ -38,14 +38,14 @@ pub struct MP4Specification {
 /////////////////////////////////////////////////////
 // IndexerType
 /////////////////////////////////////////////////////
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum DownloadMethod {
     #[serde(rename = "index")]
-    IndexInterception(IndexSpecification),
+    IndexInterception(IndexDownloadSpecification),
 
     #[serde(rename = "mp4")]
-    MP4Interception(MP4Specification),
+    MP4Interception(MP4DownloadSpecification),
 }
 
 /////////////////////////////////////////////////////

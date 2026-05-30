@@ -2,7 +2,7 @@ use std::path::Path;
 
 use url::Url;
 
-// use super::super::config::Indexer;
+use super::super::config::DownloadMethod;
 
 /////////////////////////////////////////////////////
 // DownloadError
@@ -10,11 +10,6 @@ use url::Url;
 #[derive(Debug)]
 pub enum DownloadError {}
 
-/////////////////////////////////////////////////////
-// Downloader
-/////////////////////////////////////////////////////
-pub trait Downloader {
-    fn download(input_url: &Url, output_file: &Path) -> Result<(), DownloadError>;
+pub async fn download_file(index_specification: &DownloadMethod, input_url: &Url, output_file: &Path) -> Result<(), DownloadError> {
+    Ok(())
 }
-
-// pub fn download_file();

@@ -10,8 +10,8 @@ use chromiumoxide::{
 };
 use futures::StreamExt;
 
-use super::super::super::request;
 use super::super::super::env;
+use super::super::super::request;
 
 const CHROMIUM_PATH: &str = "/usr/lib/chromium/chromium";
 

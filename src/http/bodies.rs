@@ -4,6 +4,8 @@ use axum::{
     http::StatusCode,
 };
 
+use super::super::config::Indexer;
+
 /////////////////////////////////////////////////////
 // Requests
 /////////////////////////////////////////////////////
@@ -32,6 +34,19 @@ pub struct ErrorResponse {
 }
 
 impl IntoResponse for ErrorResponse {
+    fn into_response(self) -> response::Response {
+        (self.status, response::Json(self)).into_response()
+    }
+}
+
+#[derive(Serialize)]
+pub struct IndexersResponse {
+    #[serde(skip)]
+    pub status: StatusCode,
+    pub indexers: Vec<Indexer>,
+}
+
+impl IntoResponse for IndexersResponse {
     fn into_response(self) -> response::Response {
         (self.status, response::Json(self)).into_response()
     }

@@ -34,7 +34,7 @@ async fn main() -> Result<(), AppError> {
     trace!("State: {:?}", state);
 
     // HTTP Router
-    let router = http::Router::new(env).await.map_err(AppError::RouteError)?;
+    let router = http::Router::new(env, state).await.map_err(AppError::RouteError)?;
     router.serve().await;
 
     Ok(())

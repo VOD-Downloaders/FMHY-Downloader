@@ -12,6 +12,7 @@ use axum::{
 
 use super::bodies::*;
 use super::super::env;
+use super::super::config;
 use super::super::request;
 use super::super::download;
 
@@ -23,13 +24,15 @@ pub struct DownloadInfo {
 }
 
 pub struct AppState {
+    pub state: Arc<config::State>,
     pub environment: Arc<env::EnvOptions>,
     pub downloads: HashMap<u64, DownloadInfo>,
 }
 
 impl AppState {
-    pub fn new(environment: env::EnvOptions) -> Self {
+    pub fn new(environment: env::EnvOptions, state: config::State) -> Self {
         Self {
+            state: Arc::new(state),
             environment: Arc::new(environment),
             downloads: HashMap::new(),
         }
@@ -39,6 +42,20 @@ impl AppState {
 /////////////////////////////////////////////////////
 // API
 /////////////////////////////////////////////////////
+pub async fn get_indexers(State(state): State<Arc<Mutex<AppState>>>) -> Result<IndexersResponse, ErrorResponse> {
+    trace!("Received get_indexers");
+
+    let config_state: Arc<config::State> = {
+        let state = state.lock().unwrap();
+        Arc::clone(&state.state)
+    };
+
+    Ok(IndexersResponse {
+        status: StatusCode::OK,
+        indexers: config_state.indexers.clone(),
+    })
+}
+
 pub async fn post_download(
     State(state): State<Arc<Mutex<AppState>>>, extract::Json(payload): extract::Json<DownloadRequest>,
 ) -> Result<DownloadResponse, ErrorResponse> {
@@ -89,7 +106,7 @@ pub async fn post_download(
 pub async fn get_download_status(
     State(state): State<Arc<Mutex<AppState>>>, Path(path): Path<DownloadStatusPath>,
 ) -> Result<DownloadStatusResponse, ErrorResponse> {
-    trace!("{}", path.id);
+    trace!("Received get_download_status for {}", path.id);
 
     Err(ErrorResponse {
         status: StatusCode::BAD_GATEWAY,
