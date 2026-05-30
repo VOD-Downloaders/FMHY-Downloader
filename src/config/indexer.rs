@@ -25,8 +25,8 @@ pub struct Indexer {
 /////////////////////////////////////////////////////
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexDownloadSpecification {
-    pub wait_time: u32,
-    pub retries: u32,
+    pub wait_time: u8,
+    pub retries: u8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

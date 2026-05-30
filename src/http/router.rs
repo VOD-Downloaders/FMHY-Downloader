@@ -119,7 +119,7 @@ impl Router {
             .route("/api/downloadStatus/{id}", routing::get(api::get_download_status))
 
             // State
-            .with_state(Arc::new(Mutex::new(api::AppState::new(environment, state))));
+            .with_state(Arc::new(api::AppState::new(environment, state)));
 
         trace!("Created HTTP router.");
 

@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    path::PathBuf,
+    sync::{Arc, RwLock},
 };
 
 use url::Url;
@@ -13,7 +14,6 @@ use axum::{
 use super::bodies::*;
 use super::super::env;
 use super::super::config;
-use super::super::request;
 use super::super::download;
 
 /////////////////////////////////////////////////////
@@ -24,17 +24,17 @@ pub struct DownloadInfo {
 }
 
 pub struct AppState {
-    pub state: Arc<config::State>,
-    pub environment: Arc<env::EnvOptions>,
-    pub downloads: HashMap<u64, DownloadInfo>,
+    pub state: RwLock<config::State>,
+    pub environment: env::EnvOptions, // readonly
+    pub downloads: RwLock<HashMap<u64, DownloadInfo>>,
 }
 
 impl AppState {
     pub fn new(environment: env::EnvOptions, state: config::State) -> Self {
         Self {
-            state: Arc::new(state),
-            environment: Arc::new(environment),
-            downloads: HashMap::new(),
+            state: RwLock::new(state),
+            environment: environment,
+            downloads: RwLock::new(HashMap::new()),
         }
     }
 }
@@ -42,57 +42,51 @@ impl AppState {
 /////////////////////////////////////////////////////
 // API
 /////////////////////////////////////////////////////
-pub async fn get_indexers(State(state): State<Arc<Mutex<AppState>>>) -> Result<IndexersResponse, ErrorResponse> {
+pub async fn get_indexers(State(state): State<Arc<AppState>>) -> Result<IndexersResponse, ErrorResponse> {
     trace!("Received get_indexers");
-
-    let config_state: Arc<config::State> = {
-        let state = state.lock().unwrap();
-        Arc::clone(&state.state)
-    };
 
     Ok(IndexersResponse {
         status: StatusCode::OK,
-        indexers: config_state.indexers.clone(),
+        indexers: state.state.read().unwrap().indexers.clone(),
     })
 }
 
 pub async fn post_download(
-    State(state): State<Arc<Mutex<AppState>>>, extract::Json(payload): extract::Json<DownloadRequest>,
+    State(state): State<Arc<AppState>>, extract::Json(payload): extract::Json<DownloadRequest>,
 ) -> Result<DownloadResponse, ErrorResponse> {
     trace!("Received post_download with: {:?}", payload);
 
-    let environment: Arc<env::EnvOptions> = {
-        let state = state.lock().unwrap();
-        Arc::clone(&state.environment)
-    };
+    let state_clone = Arc::clone(&state);
 
     let url = Url::parse(payload.input_url.as_str()).map_err(|_error| ErrorResponse {
         status: StatusCode::BAD_REQUEST,
         error: "Invalid URL passed in".to_string(),
     })?;
 
-    let referer = {
-        let scheme = url.scheme();
-        let host = url.host_str().ok_or(ErrorResponse {
-            status: StatusCode::BAD_REQUEST,
-            error: "Failed to retrieve domain from URL".to_string(),
-        })?;
+    let output_path = PathBuf::from(payload.output_file);
 
-        Url::parse(&format!("{}://{}", scheme, host)).map_err(|_| ErrorResponse {
-            status: StatusCode::BAD_REQUEST,
-            error: "Failed to retrieve domain from URL".to_string(),
-        })?
-    };
+    let download_status = Arc::new(RwLock::new(download::DownloadStatus::Starting));
+    let download_status_clone = Arc::clone(&download_status);
 
     tokio::spawn(async move {
-        let credentials = request::get_credentials(&environment.flaresolverr_url, &referer).await.unwrap();
+        // TODO: Resolve indexer from request
+        let (download_method, uses_cloudflare) = {
+            let guard = state_clone.state.read().unwrap();
+            let indexer = guard.indexers.get(0).unwrap();
+            (indexer.download.clone(), indexer.uses_cloudflare)
+        };
 
-        let index_data = download::get_index(&environment, &url, &credentials).await.unwrap();
+        let result = download::download_file(
+            &download_method,
+            &state_clone.environment.flaresolverr_url,
+            download_status_clone,
+            &url,
+            output_path.as_path(),
+            uses_cloudflare,
+        )
+        .await;
 
-        let path = std::path::PathBuf::from(payload.output_file);
-        let _ = download::download_file(&environment, &credentials, index_data, path.as_path())
-            .await
-            .unwrap();
+        // TODO: Result to download_status
     });
 
     // TODO: Lock again and put state in AppState
@@ -104,7 +98,7 @@ pub async fn post_download(
 }
 
 pub async fn get_download_status(
-    State(state): State<Arc<Mutex<AppState>>>, Path(path): Path<DownloadStatusPath>,
+    State(state): State<Arc<AppState>>, Path(path): Path<DownloadStatusPath>,
 ) -> Result<DownloadStatusResponse, ErrorResponse> {
     trace!("Received get_download_status for {}", path.id);
 
