@@ -181,7 +181,7 @@ impl State {
         })?;
 
         // Retrieve indexers
-        let indexer_paths = std::fs::read_dir("./indexers").map_err(StateError::UnableToReadIndexersDir)?;
+        let indexer_paths = std::fs::read_dir(Self::INDEXERS_DIR).map_err(StateError::UnableToReadIndexersDir)?;
         let mut indexers: Vec<Indexer> = Vec::new();
 
         for indexer_path in indexer_paths {
