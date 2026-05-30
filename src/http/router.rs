@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+use serde_json::json;
 use thiserror::Error;
 use axum::{routing, response};
 
@@ -111,6 +112,7 @@ impl Router {
             .route("/style.css", routing::get(Self::make_css(style_css)))
 
             // Dynamic API calls
+            .route("/health", routing::get(Self::health))
             .route("/api/download", routing::post(api::post_download))
             .route("/api/downloadStatus/{id}", routing::get(api::get_download_status))
 
@@ -120,5 +122,11 @@ impl Router {
         trace!("Created HTTP router.");
 
         router
+    }
+
+    async fn health() -> response::Json<serde_json::Value> {
+        response::Json(json!({
+            "health": "healthy"
+        }))
     }
 }
