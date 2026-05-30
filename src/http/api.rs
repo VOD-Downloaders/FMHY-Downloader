@@ -20,7 +20,7 @@ use super::super::download;
 // State
 /////////////////////////////////////////////////////
 pub struct DownloadInfo {
-    pub handle: std::thread::JoinHandle<()>,
+    pub status: Arc<RwLock<download::DownloadStatus>>,
 }
 
 pub struct AppState {
@@ -74,35 +74,48 @@ pub async fn post_download(
 
     let output_path = PathBuf::from(payload.output_file);
 
-    let download_status = Arc::new(RwLock::new(download::DownloadStatus::Starting));
-    let download_status_clone = Arc::clone(&download_status);
-
-    // TODO: Resolve indexer from request
     let (download_method, uses_cloudflare) = {
         let guard = state_clone.state.read().unwrap();
-        let indexer = guard.indexers.get(0).unwrap();
+        let indexer = guard
+            .indexers
+            .iter()
+            .find(|item| item.name == payload.indexer_name)
+            .ok_or(ErrorResponse {
+                status: StatusCode::BAD_REQUEST,
+                error: format!("Indexer by name \"{}\" not found.", payload.indexer_name),
+            })?;
+
         (indexer.download.clone(), indexer.uses_cloudflare)
     };
+
+    let download_status = Arc::new(RwLock::new(download::DownloadStatus::Starting));
+    let download_status_clone = Arc::clone(&download_status);
 
     tokio::spawn(async move {
         let result = download::download_file(
             &download_method,
             &state_clone.environment.flaresolverr_url,
-            download_status_clone,
+            Arc::clone(&download_status_clone),
             &url,
             output_path.as_path(),
             uses_cloudflare,
         )
         .await;
 
-        // TODO: Result to download_status
+        if let Err(error) = result {
+            *download_status_clone.write().unwrap() = download::DownloadStatus::Failed { message: error.to_string() };
+        }
     });
 
-    // TODO: Lock again and put state in AppState
+    let id = rand::random::<u64>();
+    {
+        let mut guard = state.downloads.write().unwrap();
+        guard.insert(id, DownloadInfo { status: download_status });
+    }
 
-    Err(ErrorResponse {
-        status: StatusCode::BAD_GATEWAY,
-        error: "MY CUSTOM ERROR".to_string(),
+    Ok(DownloadResponse {
+        status: StatusCode::OK,
+        id: id,
     })
 }
 
@@ -111,8 +124,18 @@ pub async fn get_download_status(
 ) -> Result<DownloadStatusResponse, ErrorResponse> {
     trace!("Received get_download_status for {}", path.id);
 
-    Err(ErrorResponse {
-        status: StatusCode::BAD_GATEWAY,
-        error: "MY CUSTOM ERROR 2".to_string(),
+    let guard = state.downloads.read().unwrap();
+    if !guard.contains_key(&path.id) {
+        return Err(ErrorResponse {
+            status: StatusCode::BAD_REQUEST,
+            error: format!("No download by id {}.", path.id),
+        });
+    }
+
+    let status = guard.get(&path.id).unwrap().status.read().unwrap().clone();
+
+    Ok(DownloadStatusResponse {
+        status: StatusCode::OK,
+        status_object: status,
     })
 }

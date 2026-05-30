@@ -4,6 +4,7 @@ use axum::{
     http::StatusCode,
 };
 
+use super::super::download;
 use super::super::config::Indexer;
 use super::super::config::IndexerSpecification;
 
@@ -12,6 +13,7 @@ use super::super::config::IndexerSpecification;
 /////////////////////////////////////////////////////
 #[derive(Debug, Deserialize)]
 pub struct DownloadRequest {
+    pub indexer_name: String,
     pub input_url: String,
     pub output_file: String,
 }
@@ -70,7 +72,7 @@ impl IntoResponse for IndexerSpecificationsResponse {
 pub struct DownloadResponse {
     #[serde(skip)]
     pub status: StatusCode,
-    pub message: String,
+    pub id: u64,
 }
 
 impl IntoResponse for DownloadResponse {
@@ -83,7 +85,8 @@ impl IntoResponse for DownloadResponse {
 pub struct DownloadStatusResponse {
     #[serde(skip)]
     pub status: StatusCode,
-    pub status_message: String,
+    #[serde(rename = "status")]
+    pub status_object: download::DownloadStatus,
 }
 
 impl IntoResponse for DownloadStatusResponse {

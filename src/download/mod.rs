@@ -4,6 +4,7 @@ use std::sync::{Arc, RwLock};
 
 use thiserror::Error;
 use url::Url;
+use serde::Serialize;
 
 mod index_intercept;
 use index_intercept as index;
@@ -34,14 +35,10 @@ impl Default for IndexInterceptArguments {
     }
 }
 
-pub enum DownloadArguments {
-    IndexIntercept(IndexInterceptArguments),
-    MP4Intercept { todo: u8 },
-}
-
 /////////////////////////////////////////////////////
 // DownloadStatus
 /////////////////////////////////////////////////////
+#[derive(Debug, Clone, Serialize)]
 pub enum DownloadStatus {
     Starting,
 
@@ -102,7 +99,7 @@ pub async fn download_file(
 
             let index_data = index::IndexData::get_from(&input_url, &arguments, &credentials, Arc::clone(&status))
                 .await
-                .unwrap();
+                .map_err(DownloadError::IndexInterceptError)?;
 
             index::download_file(index_data, &arguments, &credentials, output_file, status).await
         },
