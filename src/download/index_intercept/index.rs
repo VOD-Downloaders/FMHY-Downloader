@@ -1,6 +1,6 @@
-use core::fmt;
 use std::collections::HashMap;
 
+use thiserror::Error;
 use url::Url;
 use chromiumoxide::{
     browser::{Browser, BrowserConfig},
@@ -10,59 +10,34 @@ use chromiumoxide::{
 };
 use futures::StreamExt;
 
-use super::super::request;
-use super::super::env;
+use super::super::super::request;
+use super::super::super::env;
 
 const CHROMIUM_PATH: &str = "/usr/lib/chromium/chromium";
 
 /////////////////////////////////////////////////////
 // IndexError
 /////////////////////////////////////////////////////
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum IndexError {
+    #[error("Failed to retrieve the domain from \"{url}\"")]
     FailedToRetrieveDomainFromUrl { url: Url },
+    #[error("Failed to start browser with error: {error}")]
     FailedToStartBrowser { error: String },
+    #[error("Failed to open \"{page}\" with error: {error}")]
     FailedToOpenPage { page: String, error: CdpError },
+    #[error("Failed to start monitoring network requests with error: {error}")]
     FailedToStartNetworkMonitoring { error: CdpError },
+    #[error("Failed to add custom headers to browser request, error: {error}")]
     FailedToAddCustomHeaders { error: String },
+    #[error("Failed to subscribe to network events with error: {error}")]
     FailedToSubsribeToNetworkEvents { error: CdpError },
+    #[error("Failed to find the index m3u or m3u8 file before the timeout")]
     FailedToFindIndexM3U,
+    #[error("Failed to download index m3u(8) file with error: {error}")]
     FailedToDownloadIndexM3U { error: request::RequestFileError },
+    #[error("Failed to read bytes from m3u file due to error: {error}")]
     FailedToReadIndexM3U { error: String },
-}
-
-impl fmt::Display for IndexError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            IndexError::FailedToRetrieveDomainFromUrl { url } => {
-                write!(f, "Failed to retrieve the domain from \"{}\"", url)
-            },
-            IndexError::FailedToStartBrowser { error } => {
-                write!(f, "Failed to start browser with error: {}", error)
-            },
-            IndexError::FailedToOpenPage { page, error } => {
-                write!(f, "Failed to open \"{}\" with error: {}", page, error)
-            },
-            IndexError::FailedToStartNetworkMonitoring { error } => {
-                write!(f, "Failed to start monitoring network requests with error: {}", error)
-            },
-            IndexError::FailedToAddCustomHeaders { error } => {
-                write!(f, "Failed to add custom headers to browser request, error: {}", error)
-            },
-            IndexError::FailedToSubsribeToNetworkEvents { error } => {
-                write!(f, "Failed to subscribe to network events with error: {}", error)
-            },
-            IndexError::FailedToFindIndexM3U => {
-                write!(f, "Failed to find the index m3u or m3u8 file before the timeout")
-            },
-            IndexError::FailedToDownloadIndexM3U { error } => {
-                write!(f, "Failed to download index m3u(8) file with error: {}", error)
-            },
-            IndexError::FailedToReadIndexM3U { error } => {
-                write!(f, "Failed to read bytes from m3u file due to error: {}", error)
-            },
-        }
-    }
 }
 
 /////////////////////////////////////////////////////

@@ -1,46 +1,30 @@
-use core::fmt;
-
 use std::error::Error;
 use std::path::Path;
 use std::path::PathBuf;
 
+use thiserror::Error;
 use url::Url;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
 use super::IndexData;
-use super::super::env;
-use super::super::request;
+use super::super::super::env;
+use super::super::super::request;
 
 /////////////////////////////////////////////////////
 // DownloadError
 /////////////////////////////////////////////////////
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum DownloadError {
+    #[error("Failed to start downloading data from \"{url}\" with error: {error}")]
     FailedToStart { url: String, error: String },
+    #[error("Failed to open output file \"{file}\" with error: {error}", file = file.display())]
     FailedToOpenOutputFile { file: PathBuf, error: String },
+    #[error("Request to \"{url}\" failed with exit code: {exit_code}")]
     RequestFailed { url: String, exit_code: i32 },
+    #[error("Failed to write bytes to \"{file}\" due to error: {error}", file = file.display())]
     FailedToWriteBytes { file: PathBuf, error: String },
-}
-
-impl fmt::Display for DownloadError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            DownloadError::FailedToStart { url, error } => {
-                write!(f, "Failed to start downloading data from \"{}\" with error: {}", url, error)
-            },
-            DownloadError::FailedToOpenOutputFile { file, error } => {
-                write!(f, "Failed to open output file \"{}\" with error: {}", file.display(), error)
-            },
-            DownloadError::RequestFailed { url, exit_code } => {
-                write!(f, "Request to \"{}\" failed with exit code: {}", url, exit_code)
-            },
-            DownloadError::FailedToWriteBytes { file, error } => {
-                write!(f, "Failed to write bytes to \"{}\" due to error: {}", file.display(), error)
-            },
-        }
-    }
 }
 
 /////////////////////////////////////////////////////

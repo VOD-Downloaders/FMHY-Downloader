@@ -1,6 +1,6 @@
-use core::fmt;
 use std::env;
 
+use thiserror::Error;
 use url::Url;
 
 use super::super::logging::LogLevel;
@@ -8,55 +8,28 @@ use super::super::logging::LogLevel;
 /////////////////////////////////////////////////////
 // EnvError
 /////////////////////////////////////////////////////
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Error)]
 pub enum EnvError {
+    #[error("FLARESOLVERR_URL is not set in the current environment.")]
     MissingFlaresolverrUrl,
+    #[error("FLARESOLVERR_URL is set to an invalid url \"{url}\", error: {error}")]
     InvalidFlaresolverrUrl { url: String, error: url::ParseError },
+    #[error("LOG_LEVEL contains invalid data (must be \"debug\", \"info\", \"warning\" or \"error\". Received: {log_level}")]
     InvalidLogLevel { log_level: String },
+    #[error("Expected WEBUI_PORT to be a 16 bit unsigned integer, got: {port}")]
     InvalidWebUIPort { port: String },
+    #[error("Expected DOWNLOAD_THREADS to be an 8 bit unsigned integer higher than 0, got: {thread_count}")]
     InvalidThreadCount { thread_count: String },
+    #[error("DOWNLOAD_THREADS's thread count {thread_count} exceeds the maximum allowed ({max}).")]
     ThreadCountExceedsMax { thread_count: u8, max: u8 },
+    #[error("Expected INDEX_FIND_TIMEOUT to be an 8 bit unsigned integer higher than 0, got: {timeout}")]
     InvalidIndexTimeout { timeout: String },
+    #[error("Expected MAX_INDEX_ATTEMPTS to be an 8 bit unsigned integer higher than 0, got: {attempts}")]
     InvalidIndexFindAttempts { attempts: String },
+    #[error("Expected SEGMENT_DOWNLOAD_TIMEOUT to be an 8 bit unsigned integer higher than 0, got: {timeout}")]
     InvalidSegmentTimeout { timeout: String },
+    #[error("Expected SEGMENT_RETRY_ATTEMPTS to be an 8 bit unsigned integer higher than 0, got: {attempts}")]
     InvalidSegmentRetryAttempts { attempts: String },
-}
-
-impl fmt::Display for EnvError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            EnvError::MissingFlaresolverrUrl => {
-                write!(f, "FLARESOLVERR_URL is not set in the current environment.")
-            },
-            EnvError::InvalidFlaresolverrUrl { url, error } => {
-                write!(f, "FLARESOLVERR_URL is set to an invalid url \"{}\", error: {}", url, error)
-            },
-            EnvError::InvalidLogLevel { log_level } => {
-                write!(f, "LOG_LEVEL contains invalid data (must be \"debug\", \"info\", \"warning\" or \"error\". Received: {}", log_level)
-            },
-            EnvError::InvalidWebUIPort { port } => {
-                write!(f, "Expected WEBUI_PORT to be a 16 bit unsigned integer, got: {}", port)
-            },
-            EnvError::InvalidThreadCount { thread_count } => {
-                write!(f, "Expected DOWNLOAD_THREADS to be an 8 bit unsigned integer higher than 0, got: {}", thread_count)
-            },
-            EnvError::ThreadCountExceedsMax { thread_count, max } => {
-                write!(f, "DOWNLOAD_THREADS's thread count {} exceeds the maximum allowed ({}).", thread_count, max)
-            },
-            EnvError::InvalidIndexTimeout { timeout } => {
-                write!(f, "Expected INDEX_FIND_TIMEOUT to be an 8 bit unsigned integer higher than 0, got: {}", timeout)
-            },
-            EnvError::InvalidIndexFindAttempts { attempts } => {
-                write!(f, "Expected MAX_INDEX_ATTEMPTS to be an 8 bit unsigned integer higher than 0, got: {}", attempts)
-            },
-            EnvError::InvalidSegmentTimeout { timeout } => {
-                write!(f, "Expected SEGMENT_DOWNLOAD_TIMEOUT to be an 8 bit unsigned integer higher than 0, got: {}", timeout)
-            },
-            EnvError::InvalidSegmentRetryAttempts { attempts } => {
-                write!(f, "Expected SEGMENT_RETRY_ATTEMPTS to be an 8 bit unsigned integer higher than 0, got: {}", attempts)
-            },
-        }
-    }
 }
 
 /////////////////////////////////////////////////////
@@ -129,7 +102,7 @@ impl EnvOptions {
         };
 
         match log_level.to_lowercase().as_str() {
-            "debug" => Ok(Some(LogLevel::Trace)),
+            "debug" | "trace" => Ok(Some(LogLevel::Trace)),
             "info" => Ok(Some(LogLevel::Info)),
             "warning" => Ok(Some(LogLevel::Warn)),
             "error" => Ok(Some(LogLevel::Error)),

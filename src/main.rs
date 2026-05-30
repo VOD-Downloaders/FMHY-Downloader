@@ -1,29 +1,19 @@
-use core::fmt;
+use thiserror::Error;
 
 #[macro_use]
 mod logging;
 mod env;
+mod config;
 mod http;
 mod request;
-mod downloader;
+mod download;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
+#[error(transparent)]
 enum AppError {
-    EnvError(env::EnvError),
-    RouteError(http::RouteError),
-}
-
-impl fmt::Display for AppError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            AppError::EnvError(error) => {
-                write!(f, "{}", error)
-            },
-            AppError::RouteError(error) => {
-                write!(f, "{}", error)
-            },
-        }
-    }
+    EnvError(#[from] env::EnvError),
+    StateError(#[from] config::StateError),
+    RouteError(#[from] http::RouteError),
 }
 
 #[tokio::main]
@@ -38,6 +28,12 @@ async fn main() -> Result<(), AppError> {
 
     trace!("Env options: {:?}", env);
 
+    // Config
+    let state = config::State::retrieve().await?;
+
+    trace!("State: {:?}", state);
+
+    // HTTP Router
     let router = http::Router::new(env).await.map_err(AppError::RouteError)?;
     router.serve().await;
 
