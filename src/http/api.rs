@@ -26,7 +26,7 @@ pub struct DownloadInfo {
 pub struct AppState {
     pub state: RwLock<config::State>,
     pub environment: env::EnvOptions, // readonly
-    pub downloads: RwLock<HashMap<u64, DownloadInfo>>,
+    pub downloads: RwLock<HashMap<u32, DownloadInfo>>,
 }
 
 impl AppState {
@@ -107,7 +107,8 @@ pub async fn post_download(
         }
     });
 
-    let id = rand::random::<u64>();
+    let id = rand::random::<u32>();
+    trace!("Adding download by id {} to active downloads...", id);
     {
         let mut guard = state.downloads.write().unwrap();
         guard.insert(id, DownloadInfo { status: download_status });

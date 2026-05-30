@@ -23,7 +23,7 @@ pub struct DownloadRequest {
 /////////////////////////////////////////////////////
 #[derive(Deserialize)]
 pub struct DownloadStatusPath {
-    pub id: u64,
+    pub id: u32,
 }
 
 /////////////////////////////////////////////////////
@@ -72,7 +72,7 @@ impl IntoResponse for IndexerSpecificationsResponse {
 pub struct DownloadResponse {
     #[serde(skip)]
     pub status: StatusCode,
-    pub id: u64,
+    pub id: u32,
 }
 
 impl IntoResponse for DownloadResponse {
