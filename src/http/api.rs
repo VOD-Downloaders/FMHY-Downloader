@@ -51,6 +51,15 @@ pub async fn get_indexers(State(state): State<Arc<AppState>>) -> Result<Indexers
     })
 }
 
+pub async fn get_indexer_specifications(State(_state): State<Arc<AppState>>) -> Result<IndexerSpecificationsResponse, ErrorResponse> {
+    trace!("Received get_indexer_specifications");
+
+    Ok(IndexerSpecificationsResponse {
+        status: StatusCode::OK,
+        indexers: config::load_indexer_specifications().await,
+    })
+}
+
 pub async fn post_download(
     State(state): State<Arc<AppState>>, extract::Json(payload): extract::Json<DownloadRequest>,
 ) -> Result<DownloadResponse, ErrorResponse> {
@@ -68,14 +77,14 @@ pub async fn post_download(
     let download_status = Arc::new(RwLock::new(download::DownloadStatus::Starting));
     let download_status_clone = Arc::clone(&download_status);
 
-    tokio::spawn(async move {
-        // TODO: Resolve indexer from request
-        let (download_method, uses_cloudflare) = {
-            let guard = state_clone.state.read().unwrap();
-            let indexer = guard.indexers.get(0).unwrap();
-            (indexer.download.clone(), indexer.uses_cloudflare)
-        };
+    // TODO: Resolve indexer from request
+    let (download_method, uses_cloudflare) = {
+        let guard = state_clone.state.read().unwrap();
+        let indexer = guard.indexers.get(0).unwrap();
+        (indexer.download.clone(), indexer.uses_cloudflare)
+    };
 
+    tokio::spawn(async move {
         let result = download::download_file(
             &download_method,
             &state_clone.environment.flaresolverr_url,

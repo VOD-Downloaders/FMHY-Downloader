@@ -115,6 +115,7 @@ impl Router {
             // Dynamic API calls
             .route("/health", routing::get(Self::health))
             .route("/api/indexers", routing::get(api::get_indexers))
+            .route("/api/indexers/specifications", routing::get(api::get_indexer_specifications))
             .route("/api/download", routing::post(api::post_download))
             .route("/api/downloadStatus/{id}", routing::get(api::get_download_status))
 

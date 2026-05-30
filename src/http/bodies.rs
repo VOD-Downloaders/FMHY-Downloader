@@ -5,6 +5,7 @@ use axum::{
 };
 
 use super::super::config::Indexer;
+use super::super::config::IndexerSpecification;
 
 /////////////////////////////////////////////////////
 // Requests
@@ -47,6 +48,19 @@ pub struct IndexersResponse {
 }
 
 impl IntoResponse for IndexersResponse {
+    fn into_response(self) -> response::Response {
+        (self.status, response::Json(self)).into_response()
+    }
+}
+
+#[derive(Serialize)]
+pub struct IndexerSpecificationsResponse {
+    #[serde(skip)]
+    pub status: StatusCode,
+    pub indexers: Vec<IndexerSpecification>,
+}
+
+impl IntoResponse for IndexerSpecificationsResponse {
     fn into_response(self) -> response::Response {
         (self.status, response::Json(self)).into_response()
     }
