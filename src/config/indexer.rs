@@ -12,11 +12,14 @@ use serde::{Serialize, Deserialize};
 // IndexerBody
 /////////////////////////////////////////////////////
 #[derive(Debug, Serialize, Deserialize)]
-pub struct IndexerBody {
+pub struct Indexer {
+    pub name: String,
     pub url: Url,
+    pub mirrors: Vec<Url>,
+
     pub uses_cloudflare: bool,
 
-    pub specification: Indexer,
+    pub download: DownloadMethod,
 }
 
 /////////////////////////////////////////////////////
@@ -39,7 +42,7 @@ pub struct MP4Specification {
 /////////////////////////////////////////////////////
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
-pub enum Indexer {
+pub enum DownloadMethod {
     #[serde(rename = "index")]
     IndexInterception(IndexSpecification),
 

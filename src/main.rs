@@ -12,6 +12,7 @@ mod download;
 #[error(transparent)]
 enum AppError {
     EnvError(#[from] env::EnvError),
+    StateError(#[from] config::StateError),
     RouteError(#[from] http::RouteError),
 }
 
@@ -28,6 +29,9 @@ async fn main() -> Result<(), AppError> {
     trace!("Env options: {:?}", env);
 
     // Config
+    let state = config::State::retrieve().await?;
+
+    trace!("State: {:?}", state);
 
     // HTTP Router
     let router = http::Router::new(env).await.map_err(AppError::RouteError)?;

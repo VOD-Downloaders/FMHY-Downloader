@@ -10,7 +10,8 @@ target/
 README.md
 doc/
 
-# Output directory
+# Output directories
+config/
 output/
 
 # Docker files

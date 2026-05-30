@@ -3,6 +3,7 @@ services:
     build: .
     container_name: fmhy_downloader
     volumes:
+      - ./config:/config
       - ./output:/output
     environment:
       - LOG_LEVEL=info
