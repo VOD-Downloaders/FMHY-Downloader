@@ -16,7 +16,6 @@
   --red:         #ff4f6d;
   --blue:        #5ba8f5;
   --green:       #3dd68c;
-  --yellow:      #f5c542;
   --mono:        'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
   --display:     'Syne', system-ui, sans-serif;
   --r:           10px;
@@ -38,7 +37,7 @@ body {
   overflow-x: hidden;
 }
 
-/* ── Background canvas (animated dot grid) ─────────────────────────────────── */
+/* ── Background canvas ─────────────────────────────────────────────────────── */
 #bg-canvas {
   position: fixed;
   inset: 0;
@@ -93,7 +92,6 @@ header {
   transition: background .4s;
   flex-shrink: 0;
 }
-
 .health-dot.ok  { background: var(--accent); box-shadow: 0 0 6px var(--accent-30); }
 .health-dot.err { background: var(--red); }
 
@@ -169,15 +167,8 @@ header {
   transition: color .15s, border-color .15s;
   flex-shrink: 0;
 }
-
-.clear-btn:hover {
-  color: var(--text);
-  border-color: var(--border-hi);
-}
-
-/* queue-meta pushes everything right, clear-btn follows with a small gap */
+.clear-btn:hover { color: var(--text); border-color: var(--border-hi); }
 .queue-meta + .clear-btn { margin-left: .4rem; }
-/* when queue-meta is hidden */
 .queue-meta[hidden] + .clear-btn { margin-left: auto; }
 
 /* ── Fields ────────────────────────────────────────────────────────────────── */
@@ -193,8 +184,7 @@ header {
   margin-bottom: .38rem;
 }
 
-input,
-select {
+input, select {
   width: 100%;
   background: var(--surface-hi);
   border: 1px solid var(--border);
@@ -208,36 +198,22 @@ select {
   -webkit-appearance: none;
   transition: border-color .15s, box-shadow .15s, background .15s;
 }
-
 input::placeholder { color: var(--text-3); }
-
-input:focus,
-select:focus {
+input:focus, select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-10);
   background: var(--surface-hi2);
 }
+input:disabled, select:disabled { opacity: .38; cursor: not-allowed; }
 
-input:disabled,
-select:disabled {
-  opacity: .38;
-  cursor: not-allowed;
-}
-
-/* Custom select */
 .select-wrap { position: relative; }
 .select-wrap select { padding-right: 34px; cursor: pointer; }
-
 .select-arrow {
   position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 11px;
-  height: auto;
+  right: 12px; top: 50%; transform: translateY(-50%);
+  width: 11px; height: auto;
   color: var(--text-2);
   pointer-events: none;
-  flex-shrink: 0;
 }
 
 /* ── Form footer ───────────────────────────────────────────────────────────── */
@@ -267,26 +243,14 @@ select:disabled {
   flex-shrink: 0;
   letter-spacing: .02em;
 }
-
 #dl-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
-
 #dl-btn:hover:not(:disabled) {
   opacity: .88;
   box-shadow: 0 0 20px var(--accent-20);
   transform: translateY(-1px);
 }
-
-#dl-btn:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: none;
-}
-
-#dl-btn:disabled {
-  opacity: .28;
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
-}
+#dl-btn:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+#dl-btn:disabled { opacity: .28; cursor: not-allowed; box-shadow: none; transform: none; }
 
 /* ── Form status ───────────────────────────────────────────────────────────── */
 #form-status {
@@ -296,7 +260,6 @@ select:disabled {
   flex: 1;
   transition: color .2s;
 }
-
 #form-status.error { color: var(--red); }
 #form-status.ok    { color: var(--accent); }
 
@@ -316,10 +279,9 @@ select:disabled {
   border-radius: var(--r-sm);
   padding: .8rem .9rem;
   margin-bottom: .5rem;
-  transition: opacity .3s;
+  transition: opacity .4s;
   animation: slideIn .22s cubic-bezier(.22, 1, .36, 1) both;
 }
-
 .dl-item:last-child { margin-bottom: 0; }
 
 @keyframes slideIn {
@@ -329,7 +291,6 @@ select:disabled {
 
 .dl-item.dl-done { opacity: .5; }
 
-/* Item header row: id + badge */
 .dl-item-header {
   display: flex;
   align-items: center;
@@ -345,7 +306,6 @@ select:disabled {
   flex-shrink: 0;
 }
 
-/* Meta row: indexer · output */
 .dl-meta {
   display: flex;
   align-items: center;
@@ -354,12 +314,10 @@ select:disabled {
   flex-wrap: wrap;
   margin-bottom: .3rem;
 }
-
 .dl-indexer { color: var(--accent); font-weight: 500; }
 .dl-sep     { color: var(--text-3); }
 .dl-output  { color: var(--text-2); }
 
-/* URL row */
 .dl-url {
   font-size: 10.5px;
   color: var(--text-3);
@@ -368,28 +326,80 @@ select:disabled {
   text-overflow: ellipsis;
 }
 
-/* Error message */
-.dl-error-msg {
-  font-size: 11px;
-  color: var(--red);
-  margin-top: .38rem;
-  word-break: break-word;
-  line-height: 1.5;
+/* ── Progress bar ──────────────────────────────────────────────────────────── */
+.dl-progress {
+  height: 3px;
+  background: var(--surface-hi2);
+  border-radius: 2px;
+  margin: .6rem 0 0;
+  overflow: hidden;
+  position: relative;
 }
 
-/* Footer row: pulse + elapsed */
+.dl-progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 2px;
+  background: var(--accent);
+  /* Smooth growth on segment updates; fast color change on state transition */
+  transition: width .85s cubic-bezier(.22, 1, .36, 1), background .35s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer sweep for staged (indeterminate pipeline steps) */
+.dl-progress.staged .dl-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -55%;
+  width: 55%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.45) 50%, transparent 100%);
+  animation: sweep 1.5s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  to { left: 115%; }
+}
+
+/* Complete: full green bar */
+.dl-progress.complete .dl-progress-fill {
+  background: var(--green);
+}
+
+/* Failed: full red bar */
+.dl-progress.failed .dl-progress-fill {
+  background: var(--red);
+}
+
+/* ── Progress footer (label + elapsed) ─────────────────────────────────────── */
 .dl-item-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: .48rem;
+  margin-top: .38rem;
+}
+
+.dl-progress-label {
+  font-size: 9.5px;
+  color: var(--text-2);
+  letter-spacing: .03em;
+  min-height: 1em; /* prevent layout shift when label is empty */
 }
 
 .dl-elapsed {
   font-size: 9.5px;
   color: var(--text-3);
-  margin-left: auto;
   letter-spacing: .03em;
+}
+
+/* ── Error message ─────────────────────────────────────────────────────────── */
+.dl-error-msg {
+  font-size: 11px;
+  color: var(--red);
+  margin-top: .42rem;
+  word-break: break-word;
+  line-height: 1.55;
 }
 
 /* ── Status badges ─────────────────────────────────────────────────────────── */
@@ -403,38 +413,14 @@ select:disabled {
   border: 1px solid transparent;
   flex-shrink: 0;
 }
-
 .badge-starting    { color: var(--blue);   background: rgba(91,168,245,.08); border-color: rgba(91,168,245,.18); }
+.badge-finding     { color: var(--blue);   background: rgba(91,168,245,.08); border-color: rgba(91,168,245,.18); }
 .badge-downloading { color: var(--accent); background: var(--accent-10);     border-color: var(--accent-20); }
 .badge-done        { color: var(--green);  background: rgba(61,214,140,.08); border-color: rgba(61,214,140,.18); }
 .badge-error       { color: var(--red);    background: rgba(255,79,109,.08); border-color: rgba(255,79,109,.18); }
 .badge-unknown     { color: var(--text-2); background: var(--surface-hi2);   border-color: var(--border); }
 
-/* ── Pulse animation (active downloads) ────────────────────────────────────── */
-.dl-pulse {
-  display: flex;
-  align-items: center;
-  gap: 3.5px;
-}
-
-.dl-pulse span {
-  display: block;
-  width: 3.5px;
-  height: 3.5px;
-  border-radius: 50%;
-  background: var(--accent);
-  animation: pulse 1.15s ease-in-out infinite;
-}
-
-.dl-pulse span:nth-child(2) { animation-delay: .18s; }
-.dl-pulse span:nth-child(3) { animation-delay: .36s; }
-
-@keyframes pulse {
-  0%, 100% { opacity: .18; transform: scale(.7); }
-  50%       { opacity: 1;   transform: scale(1); }
-}
-
-/* ── Scrollbar ──────────────────────────────────────────────────────────────── */
+/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar            { width: 6px; }
 ::-webkit-scrollbar-track      { background: transparent; }
 ::-webkit-scrollbar-thumb      { background: var(--border); border-radius: 3px; }
