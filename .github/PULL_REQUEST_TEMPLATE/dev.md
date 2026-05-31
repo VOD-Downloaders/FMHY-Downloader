@@ -9,6 +9,7 @@
 - [ ] No additional (non-rustfmt) clippy warnings (`cargo clippy`)
 - [ ] Formatting follows projects specification (`cargo +nightly fmt` from [rustfmt](https://github.com/rust-lang/rustfmt))
 - [ ] Docker image builds (`docker build .`)
+- [ ] Add related documentation
 
 ## Changes
 
