@@ -118,15 +118,17 @@ async fn download_segment(
 
     trace!("GET request exited with status: {}, output: {}", output.status, String::from_utf8_lossy(&output.stderr));
 
-    if !output.status.success() {
-        return Err(DownloadError::RequestFailed {
-            url: url.clone(),
-            exit_code: output.status.code().unwrap_or(-1),
+    if output.stdout.len() <= arguments.preprocessing.remove_bytes as usize {
+        return Err(DownloadError::FailedToWriteBytes {
+            file: file_path.to_path_buf(),
+            error: "Downloaded amount of bytes is less than the amount to remove due to preprocessing arguments.".to_string(),
         });
     }
 
+    let clean_bytes = &output.stdout[arguments.preprocessing.remove_bytes as usize..];
+
     output_file
-        .write_all(&output.stdout)
+        .write_all(clean_bytes)
         .await
         .map_err(|error| DownloadError::FailedToWriteBytes {
             file: file_path.to_path_buf(),

@@ -325,6 +325,8 @@ impl PlaylistData {
         let playlist_contents =
             String::from_utf8(playlist_data).map_err(|error| MasterInterceptError::FailedToReadPlaylistM3U { error: error.to_string() })?;
 
+        trace!("Playlist M3U: {}", playlist_contents);
+
         Ok(Self {
             files: Self::parse_playlist(playlist_contents.as_str())?,
             referer: referer.clone(),
