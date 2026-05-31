@@ -198,10 +198,10 @@ function parseStatus(s) {
 //
 // The pipeline is staged into approximate progress fractions:
 //   Starting        →  2%
-//   FindingIndex    →  8%   (indeterminate retries)
-//   DownloadingIndex→ 20%
-//   ParsingIndex    →ː 30%
-//   Downloading     → 30%–100%  (exact: 30 + segment/total * 70)
+//   FindingIndex    →  5%   (indeterminate retries)
+//   DownloadingIndex→ 8%
+//   ParsingIndex    →ː 12%
+//   Downloading     → 12%–100%  (exact: 12 + segment/total * 88)
 //   Complete        → 100%  green
 //   Failed          → 100%  red
 function getProgress(s) {
@@ -210,8 +210,8 @@ function getProgress(s) {
     if (typeof s === 'string') {
         switch (s) {
             case 'Starting':         return { frac: 0.02, mode: 'staged',      label: 'Starting…' };
-            case 'DownloadingIndex': return { frac: 0.20, mode: 'staged',      label: 'Downloading stream index' };
-            case 'ParsingIndex':     return { frac: 0.30, mode: 'staged',      label: 'Parsing index' };
+            case 'DownloadingIndex': return { frac: 0.08, mode: 'staged',      label: 'Downloading stream index' };
+            case 'ParsingIndex':     return { frac: 0.12, mode: 'staged',      label: 'Parsing index' };
             case 'Complete':         return { frac: 1.00, mode: 'complete',    label: '' };
             case 'Failed':           return { frac: 1.00, mode: 'failed',      label: '' };
         }
@@ -223,14 +223,14 @@ function getProgress(s) {
         }
         if ('FindingIndex' in s) {
             const attempt = s.FindingIndex?.attempt ?? 1;
-            return { frac: 0.08, mode: 'staged', label: `Finding stream index (attempt ${attempt})` };
+            return { frac: 0.05, mode: 'staged', label: `Finding stream index (attempt ${attempt})` };
         }
         if ('Downloading' in s) {
             const seg   = s.Downloading?.segment ?? 0;
             const total = s.Downloading?.total_segments ?? 1;
             const raw   = total > 0 ? seg / total : 0;
             return {
-                frac:  0.30 + raw * 0.70,
+                frac:  0.12 + raw * 0.88,
                 mode:  'determinate',
                 label: `${seg.toLocaleString()} / ${total.toLocaleString()} segments`,
             };
