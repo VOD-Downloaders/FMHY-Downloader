@@ -58,6 +58,7 @@ pub async fn download_file(
         for attempt in 1..=arguments.segment_attempts {
             match download_segment(&full_url, arguments, credentials, &data.referer, &mut file, output_file).await {
                 Ok(_) => {
+                    last_error = None;
                     break;
                 },
                 Err(error) => {
