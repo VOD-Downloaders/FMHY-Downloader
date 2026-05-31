@@ -1,37 +1,23 @@
 use std::error::Error;
+use std::sync::{Arc, RwLock};
 use std::path::Path;
-use std::path::PathBuf;
 
-use thiserror::Error;
 use url::Url;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
 use super::IndexData;
-use super::super::super::env;
+use super::super::DownloadError;
+use super::super::DownloadStatus;
+use super::super::IndexInterceptArguments;
 use super::super::super::request;
-
-/////////////////////////////////////////////////////
-// DownloadError
-/////////////////////////////////////////////////////
-#[derive(Debug, Error)]
-pub enum DownloadError {
-    #[error("Failed to start downloading data from \"{url}\" with error: {error}")]
-    FailedToStart { url: String, error: String },
-    #[error("Failed to open output file \"{file}\" with error: {error}", file = file.display())]
-    FailedToOpenOutputFile { file: PathBuf, error: String },
-    #[error("Request to \"{url}\" failed with exit code: {exit_code}")]
-    RequestFailed { url: String, exit_code: i32 },
-    #[error("Failed to write bytes to \"{file}\" due to error: {error}", file = file.display())]
-    FailedToWriteBytes { file: PathBuf, error: String },
-}
 
 /////////////////////////////////////////////////////
 // Download
 /////////////////////////////////////////////////////
 pub async fn download_file(
-    environment: &env::EnvOptions, credentials: &request::Credentials, index: IndexData, output_file: &Path,
+    data: IndexData, arguments: &IndexInterceptArguments, credentials: &request::Credentials, output_file: &Path, status: Arc<RwLock<DownloadStatus>>,
 ) -> Result<(), DownloadError> {
     trace!("Opening file \"{}\" for writing...", output_file.display());
 
@@ -47,20 +33,29 @@ pub async fn download_file(
     trace!("File \"{}\" successfully opened.", output_file.display());
 
     info!("Downloading to \"{}\"...", output_file.display());
+    *status.write().unwrap() = DownloadStatus::Downloading {
+        segment: 1,
+        total_segments: data.files.len() as u32,
+    };
 
-    for segment in index.files {
+    for (i, segment) in data.files.iter().enumerate() {
+        *status.write().unwrap() = DownloadStatus::Downloading {
+            segment: i as u32,
+            total_segments: data.files.len() as u32,
+        };
+
         let segment_url = Url::parse(segment.as_str());
         let full_url = {
             match segment_url {
                 Ok(url) => url,
-                Err(_error) => index.base_url.join(segment.as_str()).unwrap(),
+                Err(_error) => data.base_url.join(segment.as_str()).unwrap(),
             }
         };
 
         let mut last_error: Option<DownloadError> = None;
 
-        for attempt in 1..=environment.segment_retry_attempts {
-            match download_segment(environment, credentials, &full_url, &index.referer, &mut file, output_file).await {
+        for attempt in 1..=arguments.segment_attempts {
+            match download_segment(&full_url, arguments, credentials, &data.referer, &mut file, output_file).await {
                 Ok(_) => {
                     break;
                 },
@@ -68,7 +63,7 @@ pub async fn download_file(
                     warning!(
                         "[Attempt {}/{}] For segment \"{}\" failed with error: {}.",
                         attempt,
-                        environment.segment_retry_attempts,
+                        arguments.segment_attempts,
                         segment.as_str(),
                         error
                     );
@@ -83,16 +78,17 @@ pub async fn download_file(
         }
     }
 
+    *status.write().unwrap() = DownloadStatus::Complete;
     Ok(())
 }
 
 async fn download_segment(
-    environment: &env::EnvOptions, credentials: &request::Credentials, url: &Url, referer: &Url, output_file: &mut File, file_path: &Path,
+    url: &Url, arguments: &IndexInterceptArguments, credentials: &request::Credentials, referer: &Url, output_file: &mut File, file_path: &Path,
 ) -> Result<(), DownloadError> {
     let referer_header = String::from("Referer: ") + referer.as_str();
     let user_agent_header = String::from("User-Agent: ") + credentials.user_agent.as_str();
-    let connect_timeout = environment.segment_download_timeout.to_string();
-    let max_timeout = environment.segment_download_timeout.to_string();
+    let connect_timeout = arguments.segment_timeout.to_string();
+    let max_timeout = arguments.segment_timeout.to_string();
 
     trace!("Sending GET request to \"{}\", with headers: [\"{}\", \"{}\"].", url, referer_header, user_agent_header);
 
@@ -115,7 +111,7 @@ async fn download_segment(
         .output()
         .await
         .map_err(|error| DownloadError::FailedToStart {
-            url: url.to_string(),
+            url: url.clone(),
             error: error.to_string(),
         })?;
 
@@ -123,7 +119,7 @@ async fn download_segment(
 
     if !output.status.success() {
         return Err(DownloadError::RequestFailed {
-            url: url.to_string(),
+            url: url.clone(),
             exit_code: output.status.code().unwrap_or(-1),
         });
     }
