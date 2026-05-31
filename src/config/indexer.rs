@@ -13,35 +13,7 @@ pub const INDEXERS_DIR: &str = "/config/indexers/";
 pub const INDEXER_SPECIFICATIONS_DIR: &str = "/config/indexers/specifications/";
 
 /////////////////////////////////////////////////////
-// IndexerSpecification
-/////////////////////////////////////////////////////
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IndexerSpecification {
-    pub name: String,
-    pub url: Url,
-    pub mirrors: Vec<Url>,
-
-    pub uses_cloudflare: bool,
-
-    pub download: DownloadMethod,
-}
-
-/////////////////////////////////////////////////////
-// Indexer
-/////////////////////////////////////////////////////
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Indexer {
-    pub name: String,
-    pub url: Url,
-    pub uses_cloudflare: bool,
-
-    pub download: DownloadMethod,
-
-    pub based_on: PathBuf,
-}
-
-/////////////////////////////////////////////////////
-// Specifications
+// DownloadSpecifications
 /////////////////////////////////////////////////////
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexDownloadSpecification {
@@ -61,9 +33,6 @@ pub struct MP4DownloadSpecification {
     pub retries: u32,
 }
 
-/////////////////////////////////////////////////////
-// IndexerType
-/////////////////////////////////////////////////////
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum DownloadMethod {
@@ -75,6 +44,57 @@ pub enum DownloadMethod {
 
     #[serde(rename = "mp4")]
     MP4Interception(MP4DownloadSpecification),
+}
+
+/////////////////////////////////////////////////////
+// ProcessingSpecifications
+/////////////////////////////////////////////////////
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessingSpecification {
+    pub remove_bytes: u32,
+}
+
+impl Default for ProcessingSpecification {
+    fn default() -> Self {
+        Self { remove_bytes: 0 }
+    }
+}
+
+/////////////////////////////////////////////////////
+// DownloadSpecification
+/////////////////////////////////////////////////////
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DownloadSpecification {
+    pub method: DownloadMethod,
+    pub preprocessing: ProcessingSpecification,
+}
+
+/////////////////////////////////////////////////////
+// IndexerSpecification
+/////////////////////////////////////////////////////
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IndexerSpecification {
+    pub name: String,
+    pub url: Url,
+    pub mirrors: Vec<Url>,
+
+    pub uses_cloudflare: bool,
+
+    pub download: DownloadSpecification,
+}
+
+/////////////////////////////////////////////////////
+// Indexer
+/////////////////////////////////////////////////////
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Indexer {
+    pub name: String,
+    pub url: Url,
+    pub uses_cloudflare: bool,
+
+    pub download: DownloadSpecification,
+
+    pub based_on: PathBuf,
 }
 
 /////////////////////////////////////////////////////

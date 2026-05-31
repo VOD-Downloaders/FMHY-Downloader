@@ -15,6 +15,8 @@ use master_intercept as master;
 
 use super::request;
 use super::config::DownloadMethod;
+use super::config::DownloadSpecification;
+use super::config::ProcessingSpecification;
 
 pub const CHROMIUM_PATH: &str = "/usr/lib/chromium/chromium";
 
@@ -22,6 +24,7 @@ pub const CHROMIUM_PATH: &str = "/usr/lib/chromium/chromium";
 // DownloadArguments
 /////////////////////////////////////////////////////
 pub struct IndexInterceptArguments {
+    pub preprocessing: ProcessingSpecification,
     pub index_attempts: u8,
     pub index_wait_time: u8,
     pub segment_attempts: u8,
@@ -31,6 +34,7 @@ pub struct IndexInterceptArguments {
 impl Default for IndexInterceptArguments {
     fn default() -> Self {
         Self {
+            preprocessing: ProcessingSpecification::default(),
             index_attempts: 5,
             index_wait_time: 6,
             segment_attempts: 3,
@@ -40,6 +44,7 @@ impl Default for IndexInterceptArguments {
 }
 
 pub struct MasterInterceptArguments {
+    pub preprocessing: ProcessingSpecification,
     pub master_attempts: u8,
     pub master_wait_time: u8,
     pub segment_attempts: u8,
@@ -49,6 +54,7 @@ pub struct MasterInterceptArguments {
 impl Default for MasterInterceptArguments {
     fn default() -> Self {
         Self {
+            preprocessing: ProcessingSpecification::default(),
             master_attempts: 5,
             master_wait_time: 6,
             segment_attempts: 3,
@@ -104,7 +110,8 @@ pub enum DownloadError {
 }
 
 pub async fn download_file(
-    method: &DownloadMethod, flaresolverr_url: &Url, status: Arc<RwLock<DownloadStatus>>, input_url: &Url, output_file: &Path, uses_cloudflare: bool,
+    specification: &DownloadSpecification, flaresolverr_url: &Url, status: Arc<RwLock<DownloadStatus>>, input_url: &Url, output_file: &Path,
+    uses_cloudflare: bool,
 ) -> Result<(), DownloadError> {
     let base_url = {
         let scheme = input_url.scheme();
@@ -119,11 +126,12 @@ pub async fn download_file(
     let credentials = request::get_credentials(flaresolverr_url, &base_url).await.unwrap();
 
     *status.write().unwrap() = DownloadStatus::Starting;
-    match method {
-        DownloadMethod::IndexInterception(specification) => {
+    match &specification.method {
+        DownloadMethod::IndexInterception(index_specification) => {
             let arguments = IndexInterceptArguments {
-                index_attempts: specification.retries,
-                index_wait_time: specification.wait_time,
+                preprocessing: specification.preprocessing.clone(),
+                index_attempts: index_specification.retries,
+                index_wait_time: index_specification.wait_time,
                 ..IndexInterceptArguments::default()
             };
 
@@ -133,10 +141,11 @@ pub async fn download_file(
 
             index::download_file(&index_data, &arguments, &credentials, output_file, status).await
         },
-        DownloadMethod::MasterInterception(specification) => {
+        DownloadMethod::MasterInterception(master_specification) => {
             let arguments = MasterInterceptArguments {
-                master_attempts: specification.retries,
-                master_wait_time: specification.wait_time,
+                preprocessing: specification.preprocessing.clone(),
+                master_attempts: master_specification.retries,
+                master_wait_time: master_specification.wait_time,
                 ..MasterInterceptArguments::default()
             };
 
@@ -147,7 +156,7 @@ pub async fn download_file(
 
             master::download_file(playlist_data, &arguments, &credentials, output_file, status).await
         },
-        DownloadMethod::MP4Interception(_specification) => {
+        DownloadMethod::MP4Interception(_mp4_specification) => {
             // TODO: ...
             Ok(())
         },

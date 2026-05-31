@@ -117,8 +117,17 @@ async fn download_segment(
         });
     }
 
+    if output.stdout.len() <= arguments.preprocessing.remove_bytes as usize {
+        return Err(DownloadError::FailedToWriteBytes {
+            file: file_path.to_path_buf(),
+            error: "Downloaded amount of bytes is less than the amount to remove due to preprocessing arguments.".to_string(),
+        });
+    }
+
+    let clean_bytes = &output.stdout[arguments.preprocessing.remove_bytes as usize..];
+
     output_file
-        .write_all(&output.stdout)
+        .write_all(clean_bytes)
         .await
         .map_err(|error| DownloadError::FailedToWriteBytes {
             file: file_path.to_path_buf(),
