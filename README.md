@@ -27,8 +27,11 @@ The docker container exposes an HTTP server with callable API functions, listed 
 
 | Type | Endpoint | Description | Input | Output |
 |---|---|---|---|---|
-| `POST` | `/api/download` | Start VOD download | { input_url, output_file } | { TODO } |
-| `GET` | `/api/downloadStatus/{id}` | Retrieve status of running download | - | { TODO } |
+| `GET` | `/health` | Healthcheck endpoint | - | { health } |
+| `GET` | `/api/indexers` | Retrieve active indexers | - | { details } |
+| `GET` | `/api/indexers/specification` | Retrieve usable indexer specifications | - | { details } |
+| `POST` | `/api/download` | Start VOD download | { input_url, output_file } | { id } |
+| `GET` | `/api/downloadStatus/{id}` | Retrieve status of running download | - | { status } |
 
 ## Contributing
 
