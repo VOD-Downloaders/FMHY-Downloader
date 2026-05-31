@@ -58,7 +58,7 @@ impl Default for MasterInterceptArguments {
             master_attempts: 5,
             master_wait_time: 6,
             segment_attempts: 3,
-            segment_timeout: 5,
+            segment_timeout: 8,
         }
     }
 }
