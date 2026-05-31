@@ -50,6 +50,12 @@ pub struct IndexDownloadSpecification {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MasterDownloadSpecification {
+    pub wait_time: u8,
+    pub retries: u8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MP4DownloadSpecification {
     pub wait_time: u32,
     pub retries: u32,
@@ -63,6 +69,9 @@ pub struct MP4DownloadSpecification {
 pub enum DownloadMethod {
     #[serde(rename = "index")]
     IndexInterception(IndexDownloadSpecification),
+
+    #[serde(rename = "master")]
+    MasterInterception(MasterDownloadSpecification),
 
     #[serde(rename = "mp4")]
     MP4Interception(MP4DownloadSpecification),

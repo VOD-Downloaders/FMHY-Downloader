@@ -8,11 +8,15 @@ use serde::Serialize;
 
 mod index_intercept;
 use index_intercept as index;
+mod master_intercept;
+use master_intercept as master;
 // mod mp4_intercept;
 // use mp4_intercept as mp4;
 
 use super::request;
 use super::config::DownloadMethod;
+
+pub const CHROMIUM_PATH: &str = "/usr/lib/chromium/chromium";
 
 /////////////////////////////////////////////////////
 // DownloadArguments
@@ -35,6 +39,24 @@ impl Default for IndexInterceptArguments {
     }
 }
 
+pub struct MasterInterceptArguments {
+    pub master_attempts: u8,
+    pub master_wait_time: u8,
+    pub segment_attempts: u8,
+    pub segment_timeout: u8,
+}
+
+impl Default for MasterInterceptArguments {
+    fn default() -> Self {
+        Self {
+            master_attempts: 5,
+            master_wait_time: 6,
+            segment_attempts: 3,
+            segment_timeout: 5,
+        }
+    }
+}
+
 /////////////////////////////////////////////////////
 // DownloadStatus
 /////////////////////////////////////////////////////
@@ -45,6 +67,12 @@ pub enum DownloadStatus {
     FindingIndex { attempt: u8 },
     DownloadingIndex,
     ParsingIndex,
+
+    FindingMaster { attempt: u8 },
+    DownloadingMaster,
+    ParsingMaster,
+    DownloadingPlaylist,
+    ParsingPlaylist,
 
     Downloading { segment: u32, total_segments: u32 },
 
@@ -62,6 +90,8 @@ pub enum DownloadError {
 
     #[error("{0}")]
     IndexInterceptError(index::IndexInterceptError),
+    #[error("{0}")]
+    MasterInterceptError(master::MasterInterceptError),
 
     #[error("Failed to start downloading data from \"{url}\" with error: {error}")]
     FailedToStart { url: Url, error: String },
@@ -76,7 +106,7 @@ pub enum DownloadError {
 pub async fn download_file(
     method: &DownloadMethod, flaresolverr_url: &Url, status: Arc<RwLock<DownloadStatus>>, input_url: &Url, output_file: &Path, uses_cloudflare: bool,
 ) -> Result<(), DownloadError> {
-    let referer = {
+    let base_url = {
         let scheme = input_url.scheme();
         let host = input_url
             .host_str()
@@ -86,7 +116,7 @@ pub async fn download_file(
     };
 
     // TODO: Only get this if cloudflare
-    let credentials = request::get_credentials(flaresolverr_url, &referer).await.unwrap();
+    let credentials = request::get_credentials(flaresolverr_url, &base_url).await.unwrap();
 
     *status.write().unwrap() = DownloadStatus::Starting;
     match method {
@@ -101,7 +131,21 @@ pub async fn download_file(
                 .await
                 .map_err(DownloadError::IndexInterceptError)?;
 
-            index::download_file(index_data, &arguments, &credentials, output_file, status).await
+            index::download_file(&index_data, &arguments, &credentials, output_file, status).await
+        },
+        DownloadMethod::MasterInterception(specification) => {
+            let arguments = MasterInterceptArguments {
+                master_attempts: specification.retries,
+                master_wait_time: specification.wait_time,
+                ..MasterInterceptArguments::default()
+            };
+
+            let master_data = master::MasterData::get_from(input_url, &arguments, &credentials, Arc::clone(&status))
+                .await
+                .map_err(DownloadError::MasterInterceptError)?;
+            let playlist_data = master_data.resolutions.iter().next().unwrap().1;
+
+            master::download_file(playlist_data, &arguments, &credentials, output_file, status).await
         },
         DownloadMethod::MP4Interception(_specification) => {
             // TODO: ...
