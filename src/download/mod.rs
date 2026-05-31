@@ -155,9 +155,9 @@ pub async fn download_file(
 
             let highest_resolution: (u32, u32) = {
                 let mut highest_resolution = (0, 0);
-                for ((width, height), _) in &master_data.resolutions {
+                for &(width, height) in master_data.resolutions.keys() {
                     if (width * height) > (highest_resolution.0 * highest_resolution.1) {
-                        highest_resolution = (width.clone(), height.clone());
+                        highest_resolution = (width, height);
                     }
                 }
                 highest_resolution
@@ -168,7 +168,7 @@ pub async fn download_file(
             trace!("Starting download for playlist ({}, {})...", highest_resolution.0, highest_resolution.1);
 
             let result = master::download_file(
-                &master_data.resolutions.get(&highest_resolution).unwrap(),
+                master_data.resolutions.get(&highest_resolution).unwrap(),
                 &arguments,
                 &credentials,
                 output_file,
