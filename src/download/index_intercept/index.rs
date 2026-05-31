@@ -11,11 +11,10 @@ use chromiumoxide::{
 };
 use futures::StreamExt;
 
+use super::super::CHROMIUM_PATH;
 use super::super::DownloadStatus;
 use super::super::IndexInterceptArguments;
 use super::super::super::request;
-
-const CHROMIUM_PATH: &str = "/usr/lib/chromium/chromium";
 
 /////////////////////////////////////////////////////
 // IndexError
@@ -34,11 +33,11 @@ pub enum IndexInterceptError {
     FailedToAddCustomHeaders { error: String },
     #[error("Failed to subscribe to network events with error: {error}")]
     FailedToSubsribeToNetworkEvents { error: CdpError },
-    #[error("Failed to find the index m3u or m3u8 file before the timeout")]
+    #[error("Failed to find the index m3u(8) file before the timeout")]
     FailedToFindIndexM3U,
     #[error("Failed to download index m3u(8) file with error: {error}")]
     FailedToDownloadIndexM3U { error: request::RequestFileError },
-    #[error("Failed to read bytes from m3u file due to error: {error}")]
+    #[error("Failed to read bytes from m3u(8) file due to error: {error}")]
     FailedToReadIndexM3U { error: String },
 }
 
@@ -67,6 +66,7 @@ impl IndexData {
             Url::parse(&format!("{}://{}", scheme, host)).map_err(|_error| IndexInterceptError::FailedToRetrieveDomainFromUrl { url: url.clone() })?
         };
 
+        // TODO: Cleanup
         let mut request = None;
         let mut last_error = None;
 

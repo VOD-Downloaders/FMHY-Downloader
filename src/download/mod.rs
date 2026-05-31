@@ -8,16 +8,23 @@ use serde::Serialize;
 
 mod index_intercept;
 use index_intercept as index;
+mod master_intercept;
+use master_intercept as master;
 // mod mp4_intercept;
 // use mp4_intercept as mp4;
 
 use super::request;
 use super::config::DownloadMethod;
+use super::config::DownloadSpecification;
+use super::config::ProcessingSpecification;
+
+pub const CHROMIUM_PATH: &str = "/usr/lib/chromium/chromium";
 
 /////////////////////////////////////////////////////
 // DownloadArguments
 /////////////////////////////////////////////////////
 pub struct IndexInterceptArguments {
+    pub preprocessing: ProcessingSpecification,
     pub index_attempts: u8,
     pub index_wait_time: u8,
     pub segment_attempts: u8,
@@ -27,10 +34,31 @@ pub struct IndexInterceptArguments {
 impl Default for IndexInterceptArguments {
     fn default() -> Self {
         Self {
+            preprocessing: ProcessingSpecification::default(),
             index_attempts: 5,
             index_wait_time: 6,
             segment_attempts: 3,
             segment_timeout: 5,
+        }
+    }
+}
+
+pub struct MasterInterceptArguments {
+    pub preprocessing: ProcessingSpecification,
+    pub master_attempts: u8,
+    pub master_wait_time: u8,
+    pub segment_attempts: u8,
+    pub segment_timeout: u8,
+}
+
+impl Default for MasterInterceptArguments {
+    fn default() -> Self {
+        Self {
+            preprocessing: ProcessingSpecification::default(),
+            master_attempts: 5,
+            master_wait_time: 6,
+            segment_attempts: 3,
+            segment_timeout: 8,
         }
     }
 }
@@ -45,6 +73,12 @@ pub enum DownloadStatus {
     FindingIndex { attempt: u8 },
     DownloadingIndex,
     ParsingIndex,
+
+    FindingMaster { attempt: u8 },
+    DownloadingMaster,
+    ParsingMaster,
+    DownloadingPlaylist,
+    ParsingPlaylist,
 
     Downloading { segment: u32, total_segments: u32 },
 
@@ -62,6 +96,8 @@ pub enum DownloadError {
 
     #[error("{0}")]
     IndexInterceptError(index::IndexInterceptError),
+    #[error("{0}")]
+    MasterInterceptError(master::MasterInterceptError),
 
     #[error("Failed to start downloading data from \"{url}\" with error: {error}")]
     FailedToStart { url: Url, error: String },
@@ -74,9 +110,10 @@ pub enum DownloadError {
 }
 
 pub async fn download_file(
-    method: &DownloadMethod, flaresolverr_url: &Url, status: Arc<RwLock<DownloadStatus>>, input_url: &Url, output_file: &Path, uses_cloudflare: bool,
+    specification: &DownloadSpecification, flaresolverr_url: &Url, status: Arc<RwLock<DownloadStatus>>, input_url: &Url, output_file: &Path,
+    uses_cloudflare: bool,
 ) -> Result<(), DownloadError> {
-    let referer = {
+    let base_url = {
         let scheme = input_url.scheme();
         let host = input_url
             .host_str()
@@ -86,14 +123,15 @@ pub async fn download_file(
     };
 
     // TODO: Only get this if cloudflare
-    let credentials = request::get_credentials(flaresolverr_url, &referer).await.unwrap();
+    let credentials = request::get_credentials(flaresolverr_url, &base_url).await.unwrap();
 
     *status.write().unwrap() = DownloadStatus::Starting;
-    match method {
-        DownloadMethod::IndexInterception(specification) => {
+    match &specification.method {
+        DownloadMethod::IndexInterception(index_specification) => {
             let arguments = IndexInterceptArguments {
-                index_attempts: specification.retries,
-                index_wait_time: specification.wait_time,
+                preprocessing: specification.preprocessing.clone(),
+                index_attempts: index_specification.retries,
+                index_wait_time: index_specification.wait_time,
                 ..IndexInterceptArguments::default()
             };
 
@@ -101,9 +139,72 @@ pub async fn download_file(
                 .await
                 .map_err(DownloadError::IndexInterceptError)?;
 
-            index::download_file(index_data, &arguments, &credentials, output_file, status).await
+            index::download_file(&index_data, &arguments, &credentials, output_file, status).await
         },
-        DownloadMethod::MP4Interception(_specification) => {
+        DownloadMethod::MasterInterception(master_specification) => {
+            let arguments = MasterInterceptArguments {
+                preprocessing: specification.preprocessing.clone(),
+                master_attempts: master_specification.retries,
+                master_wait_time: master_specification.wait_time,
+                ..MasterInterceptArguments::default()
+            };
+
+            let master_data = master::MasterData::get_from(input_url, &arguments, &credentials, Arc::clone(&status))
+                .await
+                .map_err(DownloadError::MasterInterceptError)?;
+
+            let highest_resolution: (u32, u32) = {
+                let mut highest_resolution = (0, 0);
+                for &(width, height) in master_data.resolutions.keys() {
+                    if (width * height) > (highest_resolution.0 * highest_resolution.1) {
+                        highest_resolution = (width, height);
+                    }
+                }
+                highest_resolution
+            };
+
+            trace!("Highest resolution found is: ({}, {})", highest_resolution.0, highest_resolution.1);
+
+            trace!("Starting download for playlist ({}, {})...", highest_resolution.0, highest_resolution.1);
+
+            let result = master::download_file(
+                master_data.resolutions.get(&highest_resolution).unwrap(),
+                &arguments,
+                &credentials,
+                output_file,
+                Arc::clone(&status),
+            )
+            .await;
+
+            if result.is_ok() {
+                return Ok(());
+            }
+
+            // Retry with different resolutions
+            let mut last_error = result.err().unwrap();
+            error!("Failed to download file for ({}, {}), with error: {}", highest_resolution.0, highest_resolution.1, last_error);
+
+            for ((width, height), playlist) in master_data.resolutions {
+                if (width, height) == highest_resolution {
+                    continue;
+                }
+
+                trace!("Starting download for playlist ({}, {})...", width, height);
+
+                let result = master::download_file(&playlist, &arguments, &credentials, output_file, Arc::clone(&status)).await;
+
+                if let Err(error) = result {
+                    error!("Failed to download file for ({}, {}), with error: {}", width, height, error);
+                    last_error = error;
+                } else {
+                    return Ok(());
+                }
+            }
+
+            // master_data must contain at least 1 playlist (else it would have errored)
+            Err(last_error)
+        },
+        DownloadMethod::MP4Interception(_mp4_specification) => {
             // TODO: ...
             Ok(())
         },

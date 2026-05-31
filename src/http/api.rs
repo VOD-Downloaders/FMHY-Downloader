@@ -74,7 +74,7 @@ pub async fn post_download(
 
     let output_path = PathBuf::from(payload.output_file);
 
-    let (download_method, uses_cloudflare) = {
+    let (download_specification, uses_cloudflare) = {
         let guard = state_clone.state.read().unwrap();
         let indexer = guard
             .indexers
@@ -93,7 +93,7 @@ pub async fn post_download(
 
     tokio::spawn(async move {
         let result = download::download_file(
-            &download_method,
+            &download_specification,
             &state_clone.environment.flaresolverr_url,
             Arc::clone(&download_status_clone),
             &url,

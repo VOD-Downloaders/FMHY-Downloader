@@ -7,17 +7,17 @@ use tokio::fs::{File, OpenOptions};
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
-use super::IndexData;
+use super::PlaylistData;
 use super::super::DownloadError;
 use super::super::DownloadStatus;
-use super::super::IndexInterceptArguments;
+use super::super::MasterInterceptArguments;
 use super::super::super::request;
 
 /////////////////////////////////////////////////////
 // Download
 /////////////////////////////////////////////////////
 pub async fn download_file(
-    data: &IndexData, arguments: &IndexInterceptArguments, credentials: &request::Credentials, output_file: &Path,
+    data: &PlaylistData, arguments: &MasterInterceptArguments, credentials: &request::Credentials, output_file: &Path,
     status: Arc<RwLock<DownloadStatus>>,
 ) -> Result<(), DownloadError> {
     trace!("Opening file \"{}\" for writing...", output_file.display());
@@ -45,18 +45,10 @@ pub async fn download_file(
             total_segments: data.files.len() as u32,
         };
 
-        let segment_url = Url::parse(segment.as_str());
-        let full_url = {
-            match segment_url {
-                Ok(url) => url,
-                Err(_error) => data.base_url.join(segment.as_str()).unwrap(),
-            }
-        };
-
         let mut last_error: Option<DownloadError> = None;
 
         for attempt in 1..=arguments.segment_attempts {
-            match download_segment(&full_url, arguments, credentials, &data.referer, &mut file, output_file).await {
+            match download_segment(segment, arguments, credentials, &data.referer, &mut file, output_file).await {
                 Ok(_) => {
                     last_error = None;
                     break;
@@ -85,7 +77,7 @@ pub async fn download_file(
 }
 
 async fn download_segment(
-    url: &Url, arguments: &IndexInterceptArguments, credentials: &request::Credentials, referer: &Url, output_file: &mut File, file_path: &Path,
+    url: &Url, arguments: &MasterInterceptArguments, credentials: &request::Credentials, referer: &Url, output_file: &mut File, file_path: &Path,
 ) -> Result<(), DownloadError> {
     let referer_header = String::from("Referer: ") + referer.as_str();
     let user_agent_header = String::from("User-Agent: ") + credentials.user_agent.as_str();
@@ -118,6 +110,13 @@ async fn download_segment(
         })?;
 
     trace!("GET request exited with status: {}, output: {}", output.status, String::from_utf8_lossy(&output.stderr));
+
+    if !output.status.success() {
+        return Err(DownloadError::RequestFailed {
+            url: url.clone(),
+            exit_code: output.status.code().unwrap_or(-1),
+        });
+    }
 
     if output.stdout.len() <= arguments.preprocessing.remove_bytes as usize {
         return Err(DownloadError::FailedToWriteBytes {
