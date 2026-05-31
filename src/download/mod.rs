@@ -152,9 +152,57 @@ pub async fn download_file(
             let master_data = master::MasterData::get_from(input_url, &arguments, &credentials, Arc::clone(&status))
                 .await
                 .map_err(DownloadError::MasterInterceptError)?;
-            let playlist_data = master_data.resolutions.iter().next().unwrap().1;
 
-            master::download_file(playlist_data, &arguments, &credentials, output_file, status).await
+            let highest_resolution: (u32, u32) = {
+                let mut highest_resolution = (0, 0);
+                for ((width, height), _) in &master_data.resolutions {
+                    if (width * height) > (highest_resolution.0 * highest_resolution.1) {
+                        highest_resolution = (width.clone(), height.clone());
+                    }
+                }
+                highest_resolution
+            };
+
+            trace!("Highest resolution found is: ({}, {})", highest_resolution.0, highest_resolution.1);
+
+            trace!("Starting download for playlist ({}, {})...", highest_resolution.0, highest_resolution.1);
+
+            let result = master::download_file(
+                &master_data.resolutions.get(&highest_resolution).unwrap(),
+                &arguments,
+                &credentials,
+                output_file,
+                Arc::clone(&status),
+            )
+            .await;
+
+            if result.is_ok() {
+                return Ok(());
+            }
+
+            // Retry with different resolutions
+            let mut last_error = result.err().unwrap();
+            error!("Failed to download file for ({}, {}), with error: {}", highest_resolution.0, highest_resolution.1, last_error);
+
+            for ((width, height), playlist) in master_data.resolutions {
+                if (width, height) == highest_resolution {
+                    continue;
+                }
+
+                trace!("Starting download for playlist ({}, {})...", width, height);
+
+                let result = master::download_file(&playlist, &arguments, &credentials, output_file, Arc::clone(&status)).await;
+
+                if let Err(error) = result {
+                    error!("Failed to download file for ({}, {}), with error: {}", width, height, error);
+                    last_error = error;
+                } else {
+                    return Ok(());
+                }
+            }
+
+            // master_data must contain at least 1 playlist (else it would have errored)
+            Err(last_error)
         },
         DownloadMethod::MP4Interception(_mp4_specification) => {
             // TODO: ...
