@@ -97,7 +97,7 @@ pub async fn download_file(
                 ..IndexInterceptArguments::default()
             };
 
-            let index_data = index::IndexData::get_from(&input_url, &arguments, &credentials, Arc::clone(&status))
+            let index_data = index::IndexData::get_from(input_url, &arguments, &credentials, Arc::clone(&status))
                 .await
                 .map_err(DownloadError::IndexInterceptError)?;
 
