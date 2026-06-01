@@ -1,5 +1,6 @@
 use core::fmt;
 
+use url::Url;
 use reqwest::blocking::Client;
 
 use super::Credentials;
@@ -9,9 +10,9 @@ use super::Credentials;
 /////////////////////////////////////////////////////
 #[derive(Debug)]
 pub enum RequestFileError {
-    FailedToStart { url: String, error: String },
-    RequestFailed { url: String, exit_code: i32 },
-    FailedToReadBytes { url: String, error: String },
+    FailedToStart { url: Url, error: String },
+    RequestFailed { url: Url, exit_code: i32 },
+    FailedToReadBytes { url: Url, error: String },
 }
 
 impl fmt::Display for RequestFileError {
@@ -33,29 +34,33 @@ impl fmt::Display for RequestFileError {
 /////////////////////////////////////////////////////
 // File
 /////////////////////////////////////////////////////
-pub fn get_file_contents(url: &str, credentials: &Credentials, referer: &str) -> Result<Vec<u8>, RequestFileError> {
+pub fn get_file_contents(url: &Url, credentials: &Credentials, referer: &Url) -> Result<Vec<u8>, RequestFileError> {
     let client = Client::builder()
         .redirect(reqwest::redirect::Policy::limited(10))
         .connect_timeout(std::time::Duration::from_secs(30))
-        .user_agent(credentials.user_agent.clone())
+        .user_agent(credentials.user_agent.as_str())
         .referer(false)
         .build()
         .map_err(|error| RequestFileError::FailedToStart {
-            url: url.to_string(),
+            url: url.clone(),
             error: error.to_string(),
         })?;
 
     let mut headers: reqwest::header::HeaderMap = reqwest::header::HeaderMap::new();
-    headers.insert("Referer", referer.parse().unwrap());
+    headers.insert("Referer", referer.as_str().parse().unwrap());
 
-    let response = client.get(url).headers(headers).send().map_err(|error| RequestFileError::FailedToStart {
-        url: url.to_string(),
-        error: error.to_string(),
-    })?;
+    let response = client
+        .get(url.as_str())
+        .headers(headers)
+        .send()
+        .map_err(|error| RequestFileError::FailedToStart {
+            url: url.clone(),
+            error: error.to_string(),
+        })?;
 
     if !response.status().is_success() {
         return Err(RequestFileError::RequestFailed {
-            url: url.to_string(),
+            url: url.clone(),
             exit_code: response.status().as_u16() as i32,
         });
     }
@@ -66,7 +71,7 @@ pub fn get_file_contents(url: &str, credentials: &Credentials, referer: &str) ->
             Ok(bytes)
         },
         Err(error) => Err(RequestFileError::FailedToReadBytes {
-            url: url.to_string(),
+            url: url.clone(),
             error: error.to_string(),
         }),
     }

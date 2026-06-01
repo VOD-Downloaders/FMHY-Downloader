@@ -1,52 +1,24 @@
-use core::fmt;
-
 use std::error::Error;
+use std::sync::{Arc, RwLock};
 use std::path::Path;
-use std::path::PathBuf;
 
+use url::Url;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
 use super::IndexData;
-use super::super::env;
-use super::super::request;
-
-/////////////////////////////////////////////////////
-// DownloadError
-/////////////////////////////////////////////////////
-#[derive(Debug)]
-pub enum DownloadError {
-    FailedToStart { url: String, error: String },
-    FailedToOpenOutputFile { file: PathBuf, error: String },
-    RequestFailed { url: String, exit_code: i32 },
-    FailedToWriteBytes { file: PathBuf, error: String },
-}
-
-impl fmt::Display for DownloadError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            DownloadError::FailedToStart { url, error } => {
-                write!(f, "Failed to start downloading data from \"{}\" with error: {}", url, error)
-            },
-            DownloadError::FailedToOpenOutputFile { file, error } => {
-                write!(f, "Failed to open output file \"{}\" with error: {}", file.display(), error)
-            },
-            DownloadError::RequestFailed { url, exit_code } => {
-                write!(f, "Request to \"{}\" failed with exit code: {}", url, exit_code)
-            },
-            DownloadError::FailedToWriteBytes { file, error } => {
-                write!(f, "Failed to write bytes to \"{}\" due to error: {}", file.display(), error)
-            },
-        }
-    }
-}
+use super::super::DownloadError;
+use super::super::DownloadStatus;
+use super::super::IndexInterceptArguments;
+use super::super::super::request;
 
 /////////////////////////////////////////////////////
 // Download
 /////////////////////////////////////////////////////
 pub async fn download_file(
-    environment: &env::EnvOptions, credentials: &request::Credentials, index: IndexData, output_file: &Path,
+    data: &IndexData, arguments: &IndexInterceptArguments, credentials: &request::Credentials, output_file: &Path,
+    status: Arc<RwLock<DownloadStatus>>,
 ) -> Result<(), DownloadError> {
     trace!("Opening file \"{}\" for writing...", output_file.display());
 
@@ -62,22 +34,38 @@ pub async fn download_file(
     trace!("File \"{}\" successfully opened.", output_file.display());
 
     info!("Downloading to \"{}\"...", output_file.display());
+    *status.write().unwrap() = DownloadStatus::Downloading {
+        segment: 1,
+        total_segments: data.files.len() as u32,
+    };
 
-    for segment in index.files {
-        let full_url = index.base_url.clone() + segment.as_str();
+    for (i, segment) in data.files.iter().enumerate() {
+        *status.write().unwrap() = DownloadStatus::Downloading {
+            segment: i as u32,
+            total_segments: data.files.len() as u32,
+        };
+
+        let segment_url = Url::parse(segment.as_str());
+        let full_url = {
+            match segment_url {
+                Ok(url) => url,
+                Err(_error) => data.base_url.join(segment.as_str()).unwrap(),
+            }
+        };
 
         let mut last_error: Option<DownloadError> = None;
 
-        for attempt in 1..=environment.segment_retry_attempts {
-            match download_segment(environment, credentials, full_url.as_str(), index.referer.as_str(), &mut file, output_file).await {
+        for attempt in 1..=arguments.segment_attempts {
+            match download_segment(&full_url, arguments, credentials, &data.referer, &mut file, output_file).await {
                 Ok(_) => {
+                    last_error = None;
                     break;
                 },
                 Err(error) => {
                     warning!(
                         "[Attempt {}/{}] For segment \"{}\" failed with error: {}.",
                         attempt,
-                        environment.segment_retry_attempts,
+                        arguments.segment_attempts,
                         segment.as_str(),
                         error
                     );
@@ -92,18 +80,19 @@ pub async fn download_file(
         }
     }
 
+    *status.write().unwrap() = DownloadStatus::Complete;
     Ok(())
 }
 
 async fn download_segment(
-    environment: &env::EnvOptions, credentials: &request::Credentials, url: &str, referer: &str, output_file: &mut File, file_path: &Path,
+    url: &Url, arguments: &IndexInterceptArguments, credentials: &request::Credentials, referer: &Url, output_file: &mut File, file_path: &Path,
 ) -> Result<(), DownloadError> {
-    let referer_header = String::from("Referer: ") + referer;
+    let referer_header = String::from("Referer: ") + referer.as_str();
     let user_agent_header = String::from("User-Agent: ") + credentials.user_agent.as_str();
-    let connect_timeout = environment.segment_download_timeout.to_string();
-    let max_timeout = environment.segment_download_timeout.to_string();
+    let connect_timeout = arguments.segment_timeout.to_string();
+    let max_timeout = arguments.segment_timeout.to_string();
 
-    trace!("Sending GET request to \"{}\".", url);
+    trace!("Sending GET request to \"{}\", with headers: [\"{}\", \"{}\"].", url, referer_header, user_agent_header);
 
     let output = Command::new("curl")
         .args([
@@ -119,26 +108,28 @@ async fn download_segment(
             user_agent_header.as_str(),
             "--output",
             "-", // write to stdout
-            url,
+            url.as_str(),
         ])
         .output()
         .await
         .map_err(|error| DownloadError::FailedToStart {
-            url: url.to_string(),
+            url: url.clone(),
             error: error.to_string(),
         })?;
 
     trace!("GET request exited with status: {}, output: {}", output.status, String::from_utf8_lossy(&output.stderr));
 
-    if !output.status.success() {
-        return Err(DownloadError::RequestFailed {
-            url: url.to_string(),
-            exit_code: output.status.code().unwrap_or(-1),
+    if output.stdout.len() <= arguments.preprocessing.remove_bytes as usize {
+        return Err(DownloadError::FailedToWriteBytes {
+            file: file_path.to_path_buf(),
+            error: "Downloaded amount of bytes is less than the amount to remove due to preprocessing arguments.".to_string(),
         });
     }
 
+    let clean_bytes = &output.stdout[arguments.preprocessing.remove_bytes as usize..];
+
     output_file
-        .write_all(&output.stdout)
+        .write_all(clean_bytes)
         .await
         .map_err(|error| DownloadError::FailedToWriteBytes {
             file: file_path.to_path_buf(),

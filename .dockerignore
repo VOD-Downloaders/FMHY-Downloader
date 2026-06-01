@@ -10,8 +10,9 @@ target/
 README.md
 doc/
 
-# Output directory
-output/
+# Output directories
+/config/
+/output/
 
 # Docker files
 Dockerfile

@@ -4,11 +4,16 @@ use axum::{
     http::StatusCode,
 };
 
+use super::super::download;
+use super::super::config::Indexer;
+use super::super::config::IndexerSpecification;
+
 /////////////////////////////////////////////////////
 // Requests
 /////////////////////////////////////////////////////
 #[derive(Debug, Deserialize)]
 pub struct DownloadRequest {
+    pub indexer_name: String,
     pub input_url: String,
     pub output_file: String,
 }
@@ -18,7 +23,7 @@ pub struct DownloadRequest {
 /////////////////////////////////////////////////////
 #[derive(Deserialize)]
 pub struct DownloadStatusPath {
-    pub id: u64,
+    pub id: u32,
 }
 
 /////////////////////////////////////////////////////
@@ -38,10 +43,36 @@ impl IntoResponse for ErrorResponse {
 }
 
 #[derive(Serialize)]
+pub struct IndexersResponse {
+    #[serde(skip)]
+    pub status: StatusCode,
+    pub indexers: Vec<Indexer>,
+}
+
+impl IntoResponse for IndexersResponse {
+    fn into_response(self) -> response::Response {
+        (self.status, response::Json(self)).into_response()
+    }
+}
+
+#[derive(Serialize)]
+pub struct IndexerSpecificationsResponse {
+    #[serde(skip)]
+    pub status: StatusCode,
+    pub indexers: Vec<IndexerSpecification>,
+}
+
+impl IntoResponse for IndexerSpecificationsResponse {
+    fn into_response(self) -> response::Response {
+        (self.status, response::Json(self)).into_response()
+    }
+}
+
+#[derive(Serialize)]
 pub struct DownloadResponse {
     #[serde(skip)]
     pub status: StatusCode,
-    pub message: String,
+    pub id: u32,
 }
 
 impl IntoResponse for DownloadResponse {
@@ -54,7 +85,8 @@ impl IntoResponse for DownloadResponse {
 pub struct DownloadStatusResponse {
     #[serde(skip)]
     pub status: StatusCode,
-    pub status_message: String,
+    #[serde(rename = "status")]
+    pub status_object: download::DownloadStatus,
 }
 
 impl IntoResponse for DownloadStatusResponse {
