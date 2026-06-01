@@ -1,0 +1,50 @@
+name: Publish
+
+on:
+  release: # tags: latest & vX.X.X
+    types: [published]
+  schedule: # tags: nightly
+    - cron: '0 0 * * *'
+
+jobs:
+  publish:
+    name: Publish docker image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }} # Make it run on the dev branch for the scheduled action (nightly)
+
+      - name: Set up build system
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to ghcr
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }} # Release tag ex. 0.1.0 or 0.1.0-alpha
+            type=raw,value=latest,enable=${{ github.event_name == 'release' && !contains(github.ref_name, '-') }} # Latest tag only for non alpha or beta
+            type=raw,value=nightly,enable=${{ github.event_name == 'schedule' }} # Nightly tag only for scheduled job
+
+      - name: Build and push image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
