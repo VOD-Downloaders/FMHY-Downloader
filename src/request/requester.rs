@@ -22,12 +22,18 @@ pub enum RequesterType {
 pub enum RequestError {
     #[error("Failed to create requester, error: {0}")]
     FailedToCreate(String),
+    #[error("Failed to send request, error: {0}")]
+    RequestFailedToSend(String),
+    #[error("Request failed with error: {0}")]
+    RequestFailed(String),
+    #[error("Failed to read response's bytes with error: {0}")]
+    FailedToReadBytes(String),
 }
 
 /////////////////////////////////////////////////////
 // RequesterSpecification
 /////////////////////////////////////////////////////
-type HeaderMap = reqwest::header::HeaderMap;
+pub type HeaderMap = reqwest::header::HeaderMap;
 
 pub struct RequesterSpecification {
     pub user_agent: String,
@@ -57,11 +63,11 @@ impl Requester {
         Ok(Requester::Flaresolvedd(FlaresolveddRequester::new(specification)?))
     }
 
-    pub fn get_file_contents(&self, url: &Url) -> Result<Vec<u8>, RequestError> {
+    pub fn get_file_contents(&self, url: &Url, headers: Option<HeaderMap>) -> Result<Vec<u8>, RequestError> {
         match self {
-            Requester::Native(instance) => instance.get_file_contents(url),
-            Requester::Curl(instance) => instance.get_file_contents(url),
-            Requester::Flaresolvedd(instance) => instance.get_file_contents(url),
+            Requester::Native(instance) => instance.get_file_contents(url, headers),
+            Requester::Curl(instance) => instance.get_file_contents(url, headers),
+            Requester::Flaresolvedd(instance) => instance.get_file_contents(url, headers),
         }
     }
 }

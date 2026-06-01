@@ -1,5 +1,6 @@
 use url::Url;
 
+use super::HeaderMap;
 use super::RequestError;
 use super::RequesterSpecification;
 
@@ -29,7 +30,26 @@ impl NativeRequester {
         })
     }
 
-    pub fn get_file_contents(&self, url: &Url) -> Result<Vec<u8>, RequestError> {
-        todo!()
+    pub fn get_file_contents(&self, url: &Url, headers: Option<HeaderMap>) -> Result<Vec<u8>, RequestError> {
+        let mut final_headers: reqwest::header::HeaderMap = self.specification.headers.clone();
+        for (key, val) in &headers.unwrap_or_default() {
+            final_headers.insert(key, val.clone());
+        }
+
+        let response = self
+            .client
+            .get(url.as_str())
+            .headers(final_headers)
+            .send()
+            .map_err(|error| RequestError::RequestFailedToSend(error.to_string()))?;
+
+        if !response.status().is_success() {
+            return Err(RequestError::RequestFailed(response.status().as_u16().to_string()));
+        }
+
+        match response.bytes() {
+            Ok(bytes) => Ok(bytes.into()),
+            Err(error) => Err(RequestError::FailedToReadBytes(error.to_string())),
+        }
     }
 }

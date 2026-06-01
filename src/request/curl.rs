@@ -1,5 +1,6 @@
 use url::Url;
 
+use super::HeaderMap;
 use super::RequestError;
 use super::RequesterSpecification;
 
@@ -13,7 +14,7 @@ impl CurlRequester {
         Ok(Self {})
     }
 
-    pub fn get_file_contents(&self, url: &Url) -> Result<Vec<u8>, RequestError> {
+    pub fn get_file_contents(&self, url: &Url, headers: Option<HeaderMap>) -> Result<Vec<u8>, RequestError> {
         todo!()
     }
 }
