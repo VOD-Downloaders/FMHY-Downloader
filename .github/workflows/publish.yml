@@ -34,10 +34,11 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
+          # Release tag ex. 0.1.0 or 0.1.0-alpha, Latest tag only for non alpha or beta, Nightly tag only for scheduled job
           tags: |
-            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }} # Release tag ex. 0.1.0 or 0.1.0-alpha
-            type=raw,value=latest,enable=${{ github.event_name == 'release' && !contains(github.ref_name, '-') }} # Latest tag only for non alpha or beta
-            type=raw,value=nightly,enable=${{ github.event_name == 'schedule' }} # Nightly tag only for scheduled job
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }} 
+            type=raw,value=latest,enable=${{ github.event_name == 'release' && !contains(github.ref_name, '-') }} 
+            type=raw,value=nightly,enable=${{ github.event_name == 'schedule' }} 
 
       - name: Build and push image
         uses: docker/build-push-action@v7
