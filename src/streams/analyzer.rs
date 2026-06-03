@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use thiserror::Error;
 use url::Url;
 use chromiumoxide::{
     browser::{Browser, BrowserConfig},
-    cdp::browser_protocol::network::{EnableParams, EventRequestWillBeSent, SetExtraHttpHeadersParams, Headers},
-    // cdp::browser_protocol::page::{EventLoadEventFired, NavigateParams},
+    cdp::browser_protocol::network::{
+        RequestId, EnableParams, EventRequestWillBeSent, EventResponseReceived, SetExtraHttpHeadersParams, GetResponseBodyParams, Headers,
+    },
     error::CdpError,
 };
 use futures::StreamExt;
@@ -16,6 +19,7 @@ const CHROMIUM_PATH: &str = "/usr/lib/chromium/chromium";
 // BrowserRequest
 /////////////////////////////////////////////////////
 pub type BrowserRequest = chromiumoxide::cdp::browser_protocol::network::Request;
+pub type BrowserResponse = chromiumoxide::cdp::browser_protocol::network::Response;
 
 /////////////////////////////////////////////////////
 // AnalyzeError
@@ -39,7 +43,7 @@ pub enum AnalyzeError {
 /////////////////////////////////////////////////////
 pub trait Analyzer {
     // NOTE: When returning true this analyzer signals it's done analyzing requests and may stop early
-    fn analyze(&mut self, request: &BrowserRequest) -> bool;
+    fn analyze(&mut self, request: &BrowserRequest, response: &BrowserResponse, body: Option<String>) -> bool;
 }
 
 /////////////////////////////////////////////////////
@@ -88,9 +92,14 @@ pub async fn analyze_url(
         .await
         .map_err(AnalyzeError::FailedToStartNetworkMonitoring)?;
 
-    // Subscribe to request events
+    // Subscribe to events
     let mut requests = page
         .event_listener::<EventRequestWillBeSent>()
+        .await
+        .map_err(AnalyzeError::FailedToStartNetworkMonitoring)?;
+
+    let mut responses = page
+        .event_listener::<EventResponseReceived>()
         .await
         .map_err(AnalyzeError::FailedToStartNetworkMonitoring)?;
 
@@ -114,19 +123,33 @@ pub async fn analyze_url(
     let deadline = tokio::time::sleep(std::time::Duration::from_secs(analyze_duration));
     tokio::pin!(deadline);
 
+    let mut pending: HashMap<RequestId, BrowserRequest> = HashMap::new();
+
     loop {
         tokio::select! {
             Some(event) = requests.next() => {
                 let request = &event.request;
                 trace!("{} request to {} captured.", request.method, request.url);
+                pending.insert(event.request_id.clone(), request.clone());
+            },
+            Some(event) = responses.next() => {
+                let response = &event.response;
+                trace!("Response from {} captured. ", response.url);
 
-                // Remove analyzer(s) that has finished
-                analyzers.retain_mut(|analyzer| { !analyzer.analyze(request) });
+                if let Some(request) = pending.remove(&event.request_id) {
+                    let body = page
+                        .execute(GetResponseBodyParams::new(event.request_id.clone()))
+                        .await
+                        .ok()
+                        .map(|body| { body.body.clone() });
+
+                    analyzers.retain_mut(|analyzer| { !analyzer.analyze(&request, response, body.clone()) });
+                }
 
                 if analyzers.is_empty() {
                     break;
                 }
-            }
+            },
             _ = &mut deadline => {
                 break;
             }
