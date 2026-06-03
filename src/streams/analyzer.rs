@@ -38,7 +38,8 @@ pub enum AnalyzeError {
 // Analyzer
 /////////////////////////////////////////////////////
 pub trait Analyzer {
-    fn analyze(&mut self, request: &BrowserRequest);
+    // NOTE: When returning true this analyzer signals it's done analyzing requests and may stop early
+    fn analyze(&mut self, request: &BrowserRequest) -> bool;
 }
 
 /////////////////////////////////////////////////////
@@ -119,8 +120,11 @@ pub async fn analyze_url(
                 let request = &event.request;
                 trace!("{} request to {} captured.", request.method, request.url);
 
-                for analyzer in &mut analyzers {
-                    analyzer.analyze(request);
+                // Remove analyzer(s) that has finished
+                analyzers.retain_mut(|analyzer| { !analyzer.analyze(request) });
+
+                if analyzers.is_empty() {
+                    break;
                 }
             }
             _ = &mut deadline => {
