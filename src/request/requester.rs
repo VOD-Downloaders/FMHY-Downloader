@@ -7,15 +7,6 @@ use super::CurlRequester;
 use super::FlaresolveddRequester;
 
 /////////////////////////////////////////////////////
-// RequesterType
-/////////////////////////////////////////////////////
-pub enum RequesterType {
-    Native,
-    Curl,
-    Flaresolvedd,
-}
-
-/////////////////////////////////////////////////////
 // RequestError
 /////////////////////////////////////////////////////
 #[derive(Debug, Error)]
@@ -39,6 +30,18 @@ pub struct RequesterSpecification {
     pub user_agent: String,
     pub headers: HeaderMap,
     pub connect_timeout: u64,
+    pub max_timeout: u64,
+}
+
+impl Default for RequesterSpecification {
+    fn default() -> Self {
+        Self {
+            user_agent: get_random_user_agent().to_string(),
+            headers: HeaderMap::new(),
+            connect_timeout: 10,
+            max_timeout: 10,
+        }
+    }
 }
 
 /////////////////////////////////////////////////////
@@ -59,15 +62,16 @@ impl Requester {
         Ok(Requester::Curl(CurlRequester::new(specification)?))
     }
 
-    pub fn get_flaresolvedd(specification: RequesterSpecification) -> Result<Self, RequestError> {
+    // NOTE: user_agent in specification will be ignored and replaced by flaresolverr's response.
+    pub fn get_flaresolvedd(specification: RequesterSpecification, begin_url: &Url) -> Result<Self, RequestError> {
         Ok(Requester::Flaresolvedd(FlaresolveddRequester::new(specification)?))
     }
 
-    pub fn get_file_contents(&self, url: &Url, headers: Option<HeaderMap>) -> Result<Vec<u8>, RequestError> {
+    pub async fn get_file_contents(&self, url: &Url, headers: Option<HeaderMap>) -> Result<Vec<u8>, RequestError> {
         match self {
-            Requester::Native(instance) => instance.get_file_contents(url, headers),
-            Requester::Curl(instance) => instance.get_file_contents(url, headers),
-            Requester::Flaresolvedd(instance) => instance.get_file_contents(url, headers),
+            Requester::Native(instance) => instance.get_file_contents(url, headers).await,
+            Requester::Curl(instance) => instance.get_file_contents(url, headers).await,
+            Requester::Flaresolvedd(instance) => instance.get_file_contents(url, headers).await,
         }
     }
 }

@@ -18,6 +18,7 @@ impl NativeRequester {
 
         let client = reqwest::blocking::Client::builder()
             .redirect(reqwest::redirect::Policy::limited(MAX_REDIRECTS))
+            .timeout(std::time::Duration::from_secs(specification.max_timeout))
             .connect_timeout(std::time::Duration::from_secs(specification.connect_timeout))
             .user_agent(specification.user_agent.as_str())
             .referer(false)
@@ -30,7 +31,7 @@ impl NativeRequester {
         })
     }
 
-    pub fn get_file_contents(&self, url: &Url, headers: Option<HeaderMap>) -> Result<Vec<u8>, RequestError> {
+    pub async fn get_file_contents(&self, url: &Url, headers: Option<HeaderMap>) -> Result<Vec<u8>, RequestError> {
         let mut final_headers: reqwest::header::HeaderMap = self.specification.headers.clone();
         for (key, val) in &headers.unwrap_or_default() {
             final_headers.insert(key, val.clone());
@@ -44,7 +45,7 @@ impl NativeRequester {
             .map_err(|error| RequestError::RequestFailedToSend(error.to_string()))?;
 
         if !response.status().is_success() {
-            return Err(RequestError::RequestFailed(response.status().as_u16().to_string()));
+            return Err(RequestError::RequestFailed(format!("Status: {}, Error: {}", response.status(), response.error_for_status().unwrap_err())));
         }
 
         match response.bytes() {
