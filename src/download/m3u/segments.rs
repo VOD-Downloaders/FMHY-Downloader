@@ -7,7 +7,7 @@ use tokio::fs::{File, OpenOptions};
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
-use super::IndexData;
+// use super::IndexData;
 use super::super::DownloadError;
 use super::super::DownloadStatus;
 use super::super::IndexInterceptArguments;
@@ -17,7 +17,7 @@ use super::super::super::request;
 // Download
 /////////////////////////////////////////////////////
 pub async fn download_file(
-    data: &IndexData, arguments: &IndexInterceptArguments, credentials: &request::Credentials, output_file: &Path,
+    data: &, arguments: &IndexInterceptArguments, credentials: &request::Credentials, output_file: &Path,
     status: Arc<RwLock<DownloadStatus>>,
 ) -> Result<(), DownloadError> {
     trace!("Opening file \"{}\" for writing...", output_file.display());

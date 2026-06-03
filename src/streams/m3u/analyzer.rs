@@ -2,7 +2,6 @@ use thiserror::Error;
 use url::Url;
 
 use super::super::Analyzer;
-// use super::super::AnalyzeError;
 use super::super::BrowserRequest;
 use super::super::BrowserResponse;
 
@@ -19,6 +18,12 @@ pub struct M3URequest {
 /////////////////////////////////////////////////////
 pub struct M3UAnalyzer {
     pub requests: Vec<M3URequest>,
+}
+
+impl M3UAnalyzer {
+    pub fn new() -> Self {
+        M3UAnalyzer { requests: Vec::new() }
+    }
 }
 
 impl Analyzer for M3UAnalyzer {
@@ -42,5 +47,13 @@ impl Analyzer for M3UAnalyzer {
         });
 
         false
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }

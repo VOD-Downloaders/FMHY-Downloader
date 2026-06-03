@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::collections::HashMap;
 
 use thiserror::Error;
@@ -41,16 +42,18 @@ pub enum AnalyzeError {
 /////////////////////////////////////////////////////
 // Analyzer
 /////////////////////////////////////////////////////
-pub trait Analyzer {
+pub trait Analyzer: Any {
     // NOTE: When returning true this analyzer signals it's done analyzing requests and may stop early
     fn analyze(&mut self, request: &BrowserRequest, response: &BrowserResponse, body: Option<String>) -> bool;
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
 /////////////////////////////////////////////////////
 // Analyze URL
 /////////////////////////////////////////////////////
 pub async fn analyze_url(
-    url: &Url, specification: RequesterSpecification, mut analyzers: Vec<Box<dyn Analyzer>>, analyze_duration: u64,
+    url: &Url, specification: &RequesterSpecification, analyzers: &mut [Box<dyn Analyzer>], analyze_duration: u64,
 ) -> Result<(), AnalyzeError> {
     let user_agent = "--user-agent=".to_string() + specification.user_agent.as_str();
 

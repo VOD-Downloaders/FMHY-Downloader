@@ -66,7 +66,7 @@ impl Default for ProcessingSpecification {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DownloadSpecification {
     pub method: DownloadMethod,
-    pub preprocessing: ProcessingSpecification,
+    pub segment_processing: ProcessingSpecification,
 }
 
 /////////////////////////////////////////////////////

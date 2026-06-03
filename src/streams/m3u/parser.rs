@@ -22,9 +22,14 @@ pub enum ParseError {
 /////////////////////////////////////////////////////
 // M3UResult
 /////////////////////////////////////////////////////
+#[derive(Debug)]
 pub enum M3UResult {
     Master(HashMap<(u32, u32), String>),
     Index(Vec<String>),
+}
+
+impl M3UResult {
+    pub const DEFAULT_RESOLUTION: (u32, u32) = (1080, 720);
 }
 
 /////////////////////////////////////////////////////
@@ -48,8 +53,6 @@ pub fn parse_m3u_contents(contents: &str) -> Result<M3UResult, ParseError> {
 }
 
 fn parse_master_playlist(contents: &str) -> Result<M3UResult, ParseError> {
-    const DEFAULT_RESOLUTION: (u32, u32) = (1080, 720);
-
     let mut master_map = HashMap::new();
     let mut lines = contents.lines().map(|s| s.trim()).filter(|s| !s.is_empty());
 
@@ -78,8 +81,12 @@ fn parse_master_playlist(contents: &str) -> Result<M3UResult, ParseError> {
 
                     (width, height)
                 } else {
-                    trace!("No RESOLUTION found in master file, defaulting to ({}, {})...", DEFAULT_RESOLUTION.0, DEFAULT_RESOLUTION.1);
-                    DEFAULT_RESOLUTION
+                    trace!(
+                        "No RESOLUTION found in master file, defaulting to ({}, {})...",
+                        M3UResult::DEFAULT_RESOLUTION.0,
+                        M3UResult::DEFAULT_RESOLUTION.1
+                    );
+                    M3UResult::DEFAULT_RESOLUTION
                 }
             };
 
