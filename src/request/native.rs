@@ -8,8 +8,8 @@ use super::RequesterSpecification;
 // NativeRequester
 /////////////////////////////////////////////////////
 pub struct NativeRequester {
-    specification: RequesterSpecification,
-    client: reqwest::blocking::Client,
+    pub specification: RequesterSpecification,
+    pub client: reqwest::blocking::Client,
 }
 
 impl NativeRequester {
@@ -52,5 +52,9 @@ impl NativeRequester {
             Ok(bytes) => Ok(bytes.into()),
             Err(error) => Err(RequestError::FailedToReadBytes(error.to_string())),
         }
+    }
+
+    pub fn get_specification(&self) -> &RequesterSpecification {
+        return &self.specification;
     }
 }

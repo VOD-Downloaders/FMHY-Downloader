@@ -22,6 +22,10 @@ impl FlaresolveddRequester {
         // TODO: Send request through flaresolverr session
         todo!()
     }
+
+    pub fn get_specification(&self) -> &RequesterSpecification {
+        return &self.specification;
+    }
 }
 
 impl Drop for FlaresolveddRequester {

@@ -59,4 +59,8 @@ impl CurlRequester {
 
         Ok(output.stdout)
     }
+
+    pub fn get_specification(&self) -> &RequesterSpecification {
+        return &self.specification;
+    }
 }

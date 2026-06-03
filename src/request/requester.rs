@@ -64,7 +64,7 @@ impl Requester {
 
     // NOTE: user_agent in specification will be ignored and replaced by flaresolverr's response.
     pub fn get_flaresolvedd(specification: RequesterSpecification, begin_url: &Url) -> Result<Self, RequestError> {
-        Ok(Requester::Flaresolvedd(FlaresolveddRequester::new(specification)?))
+        Ok(Requester::Flaresolvedd(FlaresolveddRequester::new(specification, begin_url)?))
     }
 
     pub async fn get_file_contents(&self, url: &Url, headers: Option<HeaderMap>) -> Result<Vec<u8>, RequestError> {
@@ -72,6 +72,14 @@ impl Requester {
             Requester::Native(instance) => instance.get_file_contents(url, headers).await,
             Requester::Curl(instance) => instance.get_file_contents(url, headers).await,
             Requester::Flaresolvedd(instance) => instance.get_file_contents(url, headers).await,
+        }
+    }
+
+    pub fn get_specification(&self) -> &RequesterSpecification {
+        match self {
+            Requester::Native(instance) => instance.get_specification(),
+            Requester::Curl(instance) => instance.get_specification(),
+            Requester::Flaresolvedd(instance) => instance.get_specification(),
         }
     }
 }
