@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use thiserror::Error;
+use url::Url;
 
 /////////////////////////////////////////////////////
 // ParseError
@@ -24,7 +25,7 @@ pub enum ParseError {
 /////////////////////////////////////////////////////
 #[derive(Debug)]
 pub enum M3UResult {
-    Master(HashMap<(u32, u32), String>),
+    Master(HashMap<(u32, u32), Url>),
     Index(Vec<String>),
 }
 
@@ -92,7 +93,13 @@ fn parse_master_playlist(contents: &str) -> Result<M3UResult, ParseError> {
 
             let url = lines.next().ok_or(ParseError::MissingStreamUrl)?.to_string();
 
-            master_map.insert(resolution, url);
+            let parsed_url = Url::parse(url.as_str());
+            let Ok(parsed_url) = parsed_url else {
+                warning!("Found stream in master m3u, but unable to parse URL, error: {}", parsed_url.unwrap_err());
+                continue;
+            };
+
+            master_map.insert(resolution, parsed_url);
         }
     }
 
