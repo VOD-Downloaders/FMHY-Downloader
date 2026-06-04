@@ -42,9 +42,10 @@ pub enum AnalyzeError {
 /////////////////////////////////////////////////////
 // Analyzer
 /////////////////////////////////////////////////////
-pub trait Analyzer: Any {
+pub trait Analyzer: Any + Send + Sync {
     // NOTE: When returning true this analyzer signals it's done analyzing requests and may stop early
     fn analyze(&mut self, request: &BrowserRequest, response: &BrowserResponse, body: Option<String>) -> bool;
+
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
@@ -53,11 +54,11 @@ pub trait Analyzer: Any {
 // Analyze URL
 /////////////////////////////////////////////////////
 pub async fn analyze_url(
-    url: &Url, specification: &RequesterSpecification, analyzers: &mut [Box<dyn Analyzer>], analyze_duration: u64,
+    url: &Url, requester_specification: &RequesterSpecification, analyzers: &mut [Box<dyn Analyzer>], analyze_duration: u64,
 ) -> Result<(), AnalyzeError> {
     let mut analyzers_copy: Vec<&mut Box<dyn Analyzer>> = analyzers.iter_mut().collect();
 
-    let user_agent = "--user-agent=".to_string() + specification.user_agent.as_str();
+    let user_agent = "--user-agent=".to_string() + requester_specification.user_agent.as_str();
 
     let (mut browser, mut handler) = Browser::launch(
         BrowserConfig::builder()
@@ -101,15 +102,15 @@ pub async fn analyze_url(
     let mut requests = page
         .event_listener::<EventRequestWillBeSent>()
         .await
-        .map_err(AnalyzeError::FailedToStartNetworkMonitoring)?;
+        .map_err(AnalyzeError::FailedToSubsribeToNetworkEvents)?;
 
     let mut responses = page
         .event_listener::<EventResponseReceived>()
         .await
-        .map_err(AnalyzeError::FailedToStartNetworkMonitoring)?;
+        .map_err(AnalyzeError::FailedToSubsribeToNetworkEvents)?;
 
     let headers = Headers::new(serde_json::Value::Object(
-        specification
+        requester_specification
             .headers
             .iter()
             .filter_map(|(k, v)| v.to_str().ok().map(|v| (k.to_string(), serde_json::Value::String(v.to_string()))))

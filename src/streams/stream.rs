@@ -13,7 +13,7 @@ use super::super::request::Requester;
 /////////////////////////////////////////////////////
 // StreamType
 /////////////////////////////////////////////////////
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum StreamType {
     M3U(Vec<Url>),
 }
@@ -32,7 +32,6 @@ pub struct Stream {
     pub width: u32,
     pub height: u32,
 
-    #[serde(skip)]
     pub stream_type: StreamType,
 }
 

@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    fmt::format,
     path::PathBuf,
     sync::{Arc, RwLock},
 };
@@ -14,14 +15,14 @@ use axum::{
 use super::bodies::*;
 use super::super::env;
 use super::super::config;
+use super::super::request;
+use super::super::streams;
 use super::super::download;
 
 /////////////////////////////////////////////////////
 // State
 /////////////////////////////////////////////////////
-pub struct DownloadInfo {
-    pub status: Arc<RwLock<download::DownloadStatus>>,
-}
+pub struct DownloadInfo {}
 
 pub struct AppState {
     pub state: RwLock<config::State>,
@@ -60,22 +61,13 @@ pub async fn get_indexer_specifications(State(_state): State<Arc<AppState>>) -> 
     })
 }
 
-pub async fn post_download(
-    State(state): State<Arc<AppState>>, extract::Json(payload): extract::Json<DownloadRequest>,
-) -> Result<DownloadResponse, ErrorResponse> {
-    trace!("Received post_download with: {:?}", payload);
+pub async fn post_streams(
+    State(state): State<Arc<AppState>>, extract::Json(payload): extract::Json<StreamsRequest>,
+) -> Result<StreamsResponse, ErrorResponse> {
+    trace!("Received get_streams for {}.", payload.input_url);
 
-    let state_clone = Arc::clone(&state);
-
-    let url = Url::parse(payload.input_url.as_str()).map_err(|_error| ErrorResponse {
-        status: StatusCode::BAD_REQUEST,
-        error: "Invalid URL passed in".to_string(),
-    })?;
-
-    let output_path = PathBuf::from(payload.output_file);
-
-    let (download_specification, uses_cloudflare) = {
-        let guard = state_clone.state.read().unwrap();
+    let indexer = {
+        let guard = state.state.read().unwrap();
         let indexer = guard
             .indexers
             .iter()
@@ -85,25 +77,60 @@ pub async fn post_download(
                 error: format!("Indexer by name \"{}\" not found.", payload.indexer_name),
             })?;
 
-        (indexer.download.clone(), indexer.uses_cloudflare)
+        indexer.clone()
     };
 
-    let download_status = Arc::new(RwLock::new(download::DownloadStatus::Starting));
-    let download_status_clone = Arc::clone(&download_status);
+    let url = Url::parse(payload.input_url.as_str()).map_err(|error| ErrorResponse {
+        status: StatusCode::BAD_REQUEST,
+        error: format!("Invalid URL passed in, error: {}", error),
+    })?;
+
+    // TODO: Handle cloudflare
+    let requester = request::Requester::get_curl(request::RequesterSpecification::default()).map_err(|error| ErrorResponse {
+        status: StatusCode::PRECONDITION_FAILED,
+        error: format!("Unable to create requester object due to error: {}", error),
+    })?;
+
+    let streams = streams::get_streams(&indexer, &requester, &url).await;
+
+    Ok(StreamsResponse {
+        status: StatusCode::OK,
+        streams: streams,
+    })
+}
+
+pub async fn post_download(
+    State(state): State<Arc<AppState>>, extract::Json(payload): extract::Json<DownloadRequest>,
+) -> Result<DownloadResponse, ErrorResponse> {
+    trace!("Received post_download with: {:?}", payload);
+
+    let indexer = {
+        let guard = state.state.read().unwrap();
+        let indexer = guard
+            .indexers
+            .iter()
+            .find(|item| item.name == payload.indexer_name)
+            .ok_or(ErrorResponse {
+                status: StatusCode::BAD_REQUEST,
+                error: format!("Indexer by name \"{}\" not found.", payload.indexer_name),
+            })?;
+
+        indexer.clone()
+    };
+
+    // TODO: Handle cloudflare
+    let requester = request::Requester::get_curl(request::RequesterSpecification::default()).map_err(|error| ErrorResponse {
+        status: StatusCode::PRECONDITION_FAILED,
+        error: format!("Unable to create requester object due to error: {}", error),
+    })?;
+
+    let output_file = PathBuf::from(payload.output_file);
 
     tokio::spawn(async move {
-        let result = download::download_file(
-            &download_specification,
-            &state_clone.environment.flaresolverr_url,
-            Arc::clone(&download_status_clone),
-            &url,
-            output_path.as_path(),
-            uses_cloudflare,
-        )
-        .await;
+        let result = download::download_stream(&indexer, payload.stream, &requester, output_file.as_path()).await;
 
         if let Err(error) = result {
-            *download_status_clone.write().unwrap() = download::DownloadStatus::Failed { message: error.to_string() };
+            error!("Download failed due to error: {}", error);
         }
     });
 
@@ -111,32 +138,11 @@ pub async fn post_download(
     trace!("Adding download by id {} to active downloads...", id);
     {
         let mut guard = state.downloads.write().unwrap();
-        guard.insert(id, DownloadInfo { status: download_status });
+        guard.insert(id, DownloadInfo {});
     }
 
     Ok(DownloadResponse {
         status: StatusCode::OK,
         id: id,
-    })
-}
-
-pub async fn get_download_status(
-    State(state): State<Arc<AppState>>, Path(path): Path<DownloadStatusPath>,
-) -> Result<DownloadStatusResponse, ErrorResponse> {
-    trace!("Received get_download_status for {}", path.id);
-
-    let guard = state.downloads.read().unwrap();
-    if !guard.contains_key(&path.id) {
-        return Err(ErrorResponse {
-            status: StatusCode::BAD_REQUEST,
-            error: format!("No download by id {}.", path.id),
-        });
-    }
-
-    let status = guard.get(&path.id).unwrap().status.read().unwrap().clone();
-
-    Ok(DownloadStatusResponse {
-        status: StatusCode::OK,
-        status_object: status,
     })
 }

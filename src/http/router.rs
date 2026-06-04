@@ -116,8 +116,8 @@ impl Router {
             .route("/health", routing::get(Self::health))
             .route("/api/indexers", routing::get(api::get_indexers))
             .route("/api/indexers/specifications", routing::get(api::get_indexer_specifications))
+            .route("/api/streams", routing::post(api::post_streams))
             .route("/api/download", routing::post(api::post_download))
-            .route("/api/downloadStatus/{id}", routing::get(api::get_download_status))
 
             // State
             .with_state(Arc::new(api::AppState::new(environment, state)));
