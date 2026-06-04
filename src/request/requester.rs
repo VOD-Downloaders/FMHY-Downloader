@@ -62,9 +62,13 @@ impl Requester {
         Ok(Requester::Curl(CurlRequester::new(specification)?))
     }
 
+    pub fn get_flaresolvedd_session(specification: RequesterSpecification, flaressolverr_url: &Url) -> Result<Self, RequestError> {
+        Ok(Requester::Flaresolvedd(FlaresolveddRequester::new_session(specification, flaressolverr_url)?))
+    }
+
     // NOTE: user_agent in specification will be ignored and replaced by flaresolverr's response.
-    pub fn get_flaresolvedd(specification: RequesterSpecification, begin_url: &Url) -> Result<Self, RequestError> {
-        Ok(Requester::Flaresolvedd(FlaresolveddRequester::new(specification, begin_url)?))
+    pub fn get_flaresolvedd_native(specification: RequesterSpecification, flaressolverr_url: &Url, begin_url: &Url) -> Result<Self, RequestError> {
+        Ok(Requester::Flaresolvedd(FlaresolveddRequester::new_native(specification, flaressolverr_url, begin_url)?))
     }
 
     pub async fn get_file_contents(&self, url: &Url, headers: Option<HeaderMap>) -> Result<Vec<u8>, RequestError> {
