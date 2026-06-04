@@ -74,6 +74,7 @@ Contributions to the Documentation are highly appreciated, add your files to the
 | [serde](https://crates.io/crates/serde) | 1 | MIT / Apache-2.0 | Serialization/deserialization framework |
 | [serde_json](https://crates.io/crates/serde_json) | 1 | MIT / Apache-2.0 | JSON parsing for API payloads |
 | [axum](https://crates.io/crates/axum) | 0.8 | MIT | HTTP routing and request-handling |
+| [base64](https://crates.io/crates/base64) | 0.22 | MIT / Apache-2.0 | Base64 encoder and decoder |
 | [rand](https://crates.io/crates/rand) | 0.10 | MIT / Apache-2.0 | Random number generator |
 | [url](https://crates.io/crates/url) | 2.5 | MIT / Apache-2.0 | Rust implementation of the URL standard. |
 | [chromiumoxide](https://crates.io/crates/chromiumoxide) | 0.9 | MIT / Apache-2.0 | A high-level API for interacting with the Chrome DevTools. |

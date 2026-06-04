@@ -38,6 +38,7 @@ impl M3UResult {
 /////////////////////////////////////////////////////
 pub fn parse_m3u_contents(contents: &str) -> Result<M3UResult, ParseError> {
     let trimmed = contents.trim();
+    trace!("Parsing M3U: {}", trimmed);
 
     if !trimmed.starts_with("#EXTM3U") {
         return Err(ParseError::InvalidHeader);

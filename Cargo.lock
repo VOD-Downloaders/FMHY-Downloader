@@ -459,6 +459,7 @@ name = "fmhy_downloader"
 version = "0.1.0-alpha2"
 dependencies = [
  "axum",
+ "base64",
  "chromiumoxide",
  "chrono",
  "colored",

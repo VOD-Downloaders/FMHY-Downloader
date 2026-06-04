@@ -11,6 +11,7 @@ use chromiumoxide::{
     error::CdpError,
 };
 use futures::StreamExt;
+use base64::{engine::general_purpose, Engine};
 
 use super::super::request::RequesterSpecification;
 
@@ -147,7 +148,18 @@ pub async fn analyze_url(
                         .execute(GetResponseBodyParams::new(event.request_id.clone()))
                         .await
                         .ok()
-                        .map(|body| { body.body.clone() });
+                        .map(|body| {
+                            // Decode base64 if encoded
+                            if body.base64_encoded {
+                                general_purpose::STANDARD
+                                    .decode(&body.body)
+                                    .ok()
+                                    .and_then(|bytes| String::from_utf8(bytes).ok())
+                                    .unwrap_or(body.body.clone())
+                            } else {
+                                body.body.clone()
+                            }
+                        });
 
                     analyzers_copy.retain_mut(|analyzer| { !analyzer.analyze(&request, response, body.clone()) });
                 }

@@ -41,9 +41,12 @@ impl Analyzer for M3UAnalyzer {
             return false;
         }
 
+        let body_str = body.unwrap_or_default();
+        trace!("Found M3U request: GET {} (mime-type: {}), with response: {}", request.url, response.mime_type.as_str(), body_str.as_str());
+
         self.requests.push(M3URequest {
             url: Url::parse(request.url.as_str()).unwrap(),
-            contents: body.unwrap_or_default(),
+            contents: body_str,
         });
 
         false
