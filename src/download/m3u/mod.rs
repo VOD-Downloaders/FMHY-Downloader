@@ -1,5 +1,3 @@
-mod segments;
-mod index;
+mod downloader;
 
-pub use segments::*;
-pub use index::*;
+pub use downloader::*;

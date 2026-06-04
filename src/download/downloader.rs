@@ -1,193 +1,87 @@
+use std::error::Error;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
 
 use thiserror::Error;
 use url::Url;
-use serde::Serialize;
+use tokio::fs::OpenOptions;
 
 use super::super::config;
 use super::super::request;
+use super::super::streams;
 
-/////////////////////////////////////////////////////
-// DownloadArguments
-/////////////////////////////////////////////////////
-pub struct IndexInterceptArguments {
-    pub segment_processing: config::ProcessingSpecification,
-    pub index_attempts: u8,
-    pub index_wait_time: u8,
-    pub segment_attempts: u8,
-    pub segment_timeout: u8,
-}
-
-impl Default for IndexInterceptArguments {
-    fn default() -> Self {
-        Self {
-            segment_processing: config::ProcessingSpecification::default(),
-            index_attempts: 5,
-            index_wait_time: 6,
-            segment_attempts: 3,
-            segment_timeout: 5,
-        }
-    }
-}
-
-pub struct MasterInterceptArguments {
-    pub segment_processing: config::ProcessingSpecification,
-    pub master_attempts: u8,
-    pub master_wait_time: u8,
-    pub segment_attempts: u8,
-    pub segment_timeout: u8,
-}
-
-impl Default for MasterInterceptArguments {
-    fn default() -> Self {
-        Self {
-            segment_processing: config::ProcessingSpecification::default(),
-            master_attempts: 5,
-            master_wait_time: 6,
-            segment_attempts: 3,
-            segment_timeout: 8,
-        }
-    }
-}
-
-/////////////////////////////////////////////////////
-// DownloadStatus
-/////////////////////////////////////////////////////
-#[derive(Debug, Clone, Serialize)]
-pub enum DownloadStatus {
-    Starting,
-
-    FindingIndex { attempt: u8 },
-    ParsingIndex,
-
-    FindingMaster { attempt: u8 },
-    ParsingMaster,
-    DownloadingPlaylist,
-    ParsingPlaylist,
-
-    Downloading { segment: u32, total_segments: u32 },
-
-    Complete,
-    Failed { message: String },
-}
+use super::m3u;
 
 /////////////////////////////////////////////////////
 // DownloadError
 /////////////////////////////////////////////////////
 #[derive(Debug, Error)]
 pub enum DownloadError {
+    #[error("Indexer download type doesn't match stream type passed in")]
+    InvalidStreamIndexerCombo,
     #[error("Failed to retrieve domain from \"{0}\"")]
     FailedToRetrieveDomainFromURL(Url),
 
-    // #[error("{0}")]
-    // IndexInterceptError(index::IndexInterceptError),
-    // #[error("{0}")]
-    // MasterInterceptError(master::MasterInterceptError),
-    //
     #[error("Failed to start downloading data from \"{url}\" with error: {error}")]
     FailedToStart { url: Url, error: String },
     #[error("Failed to open output file \"{file}\" with error: {error}", file = file.display())]
     FailedToOpenOutputFile { file: PathBuf, error: String },
-    #[error("Request to \"{url}\" failed with exit code: {exit_code}")]
-    RequestFailed { url: Url, exit_code: i32 },
-    #[error("Failed to write bytes to \"{file}\" due to error: {error}", file = file.display())]
-    FailedToWriteBytes { file: PathBuf, error: String },
+    #[error("Request error: {0}")]
+    RequestFailed(request::RequestError),
+    #[error("Failed to write bytes to disk due to error: {0}")]
+    FailedToWriteBytes(String),
 }
 
 /////////////////////////////////////////////////////
 // Downloader
 /////////////////////////////////////////////////////
-pub async fn download_file(
-    indexer: &config::Indexer, flaresolverr_url: &Url, status: Arc<RwLock<DownloadStatus>>, input_url: &Url, output_file: &Path,
+pub async fn download_stream(
+    indexer: &config::Indexer, stream: streams::Stream, requester: &request::Requester, output_file: &Path,
 ) -> Result<(), DownloadError> {
-    *status.write().unwrap() = DownloadStatus::Starting;
+    // Check of indexer's download_method against stream's stream_type
+    if (matches!(indexer.download.method, config::DownloadMethod::IndexInterception(_)) && !matches!(stream.stream_type, streams::StreamType::M3U(_)))
+        || (matches!(indexer.download.method, config::DownloadMethod::MasterInterception(_))
+            && !matches!(stream.stream_type, streams::StreamType::M3U(_)))
+    {
+        return Err(DownloadError::InvalidStreamIndexerCombo);
+    }
 
-    // TODO: Handle cloudflare sites
-    let requester = request::Requester::get_native(request::RequesterSpecification::default());
+    // Open output
+    trace!("Opening file \"{}\" for writing...", output_file.display());
 
-    match &indexer.download.method {
-        config::DownloadMethod::IndexInterception(index_specification) => {
-            let arguments = IndexInterceptArguments {
-                segment_processing: indexer.download.segment_processing.clone(),
-                index_attempts: index_specification.retries,
-                index_wait_time: index_specification.wait_time,
-                ..IndexInterceptArguments::default()
-            };
+    let mut file = OpenOptions::new().create(true).append(true).open(output_file).await.map_err(|error| {
+        trace!("Failed to open \"{}\", error: {:?}, source: {:?}", output_file.display(), error, error.source());
 
-            let index_data = index::IndexData::get_from(input_url, &arguments, &credentials, Arc::clone(&status))
-                .await
-                .map_err(DownloadError::IndexInterceptError)?;
+        DownloadError::FailedToOpenOutputFile {
+            file: output_file.to_path_buf(),
+            error: error.to_string(),
+        }
+    })?;
 
-            index::download_file(&index_data, &arguments, &credentials, output_file, status).await
-        },
-        config::DownloadMethod::MasterInterception(master_specification) => {
-            let arguments = MasterInterceptArguments {
-                preprocessing: specification.preprocessing.clone(),
-                master_attempts: master_specification.retries,
-                master_wait_time: master_specification.wait_time,
-                ..MasterInterceptArguments::default()
-            };
+    trace!("File \"{}\" successfully opened.", output_file.display());
 
-            let master_data = master::MasterData::get_from(input_url, &arguments, &credentials, Arc::clone(&status))
-                .await
-                .map_err(DownloadError::MasterInterceptError)?;
-
-            let highest_resolution: (u32, u32) = {
-                let mut highest_resolution = (0, 0);
-                for &(width, height) in master_data.resolutions.keys() {
-                    if (width * height) > (highest_resolution.0 * highest_resolution.1) {
-                        highest_resolution = (width, height);
-                    }
+    // Download based of of stream_type
+    match stream.stream_type {
+        streams::StreamType::M3U(segments) => {
+            let (segment_attempts, segment_timeout) = {
+                match &indexer.download.method {
+                    config::DownloadMethod::IndexInterception(specification) => (specification.retries, specification.wait_time),
+                    config::DownloadMethod::MasterInterception(specification) => (specification.retries, specification.wait_time),
+                    _ => panic!("Internal logic error, unable to reach this path."),
                 }
-                highest_resolution
             };
 
-            trace!("Highest resolution found is: ({}, {})", highest_resolution.0, highest_resolution.1);
-
-            trace!("Starting download for playlist ({}, {})...", highest_resolution.0, highest_resolution.1);
-
-            let result = master::download_file(
-                master_data.resolutions.get(&highest_resolution).unwrap(),
-                &arguments,
-                &credentials,
-                output_file,
-                Arc::clone(&status),
+            m3u::download_segments(
+                segments,
+                m3u::SegmentDownloadArguments {
+                    segment_preprocessing: indexer.download.segment_processing.clone(),
+                    segment_timeout: segment_timeout,
+                    segment_retries: segment_attempts,
+                },
+                requester,
+                &mut file,
             )
-            .await;
-
-            if result.is_ok() {
-                return Ok(());
-            }
-
-            // Retry with different resolutions
-            let mut last_error = result.err().unwrap();
-            error!("Failed to download file for ({}, {}), with error: {}", highest_resolution.0, highest_resolution.1, last_error);
-
-            for ((width, height), playlist) in master_data.resolutions {
-                if (width, height) == highest_resolution {
-                    continue;
-                }
-
-                trace!("Starting download for playlist ({}, {})...", width, height);
-
-                let result = master::download_file(&playlist, &arguments, &credentials, output_file, Arc::clone(&status)).await;
-
-                if let Err(error) = result {
-                    error!("Failed to download file for ({}, {}), with error: {}", width, height, error);
-                    last_error = error;
-                } else {
-                    return Ok(());
-                }
-            }
-
-            // master_data must contain at least 1 playlist (else it would have errored)
-            Err(last_error)
-        },
-        DownloadMethod::MP4Interception(_mp4_specification) => {
-            // TODO: ...
-            Ok(())
+            .await
         },
     }
 }
