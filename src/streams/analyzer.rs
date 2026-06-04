@@ -55,6 +55,8 @@ pub trait Analyzer: Any {
 pub async fn analyze_url(
     url: &Url, specification: &RequesterSpecification, analyzers: &mut [Box<dyn Analyzer>], analyze_duration: u64,
 ) -> Result<(), AnalyzeError> {
+    let mut analyzers_copy: Vec<&mut Box<dyn Analyzer>> = analyzers.iter_mut().collect();
+
     let user_agent = "--user-agent=".to_string() + specification.user_agent.as_str();
 
     let (mut browser, mut handler) = Browser::launch(
@@ -146,10 +148,10 @@ pub async fn analyze_url(
                         .ok()
                         .map(|body| { body.body.clone() });
 
-                    analyzers.retain_mut(|analyzer| { !analyzer.analyze(&request, response, body.clone()) });
+                    analyzers_copy.retain_mut(|analyzer| { !analyzer.analyze(&request, response, body.clone()) });
                 }
 
-                if analyzers.is_empty() {
+                if analyzers_copy.is_empty() {
                     break;
                 }
             },

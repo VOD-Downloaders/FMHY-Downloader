@@ -1,4 +1,3 @@
-use chromiumoxide::cdp::browser_protocol::input;
 use url::Url;
 use serde::{Serialize, Deserialize};
 
@@ -117,7 +116,9 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
                             }
                         }
 
-                        return streams;
+                        if !streams.is_empty() {
+                            return streams;
+                        }
                     }
                 }
             }
