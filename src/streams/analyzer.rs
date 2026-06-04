@@ -141,7 +141,7 @@ pub async fn analyze_url(
             },
             Some(event) = responses.next() => {
                 let response = &event.response;
-                trace!("Response from {} captured. ", response.url);
+                trace!("Response from {} captured.", response.url);
 
                 if let Some(request) = pending.remove(&event.request_id) {
                     let body = page
@@ -161,6 +161,7 @@ pub async fn analyze_url(
                             }
                         });
 
+                    // trace!("Response body from \"{}\" captured: {:?}", response.url, body);
                     analyzers_copy.retain_mut(|analyzer| { !analyzer.analyze(&request, response, body.clone()) });
                 }
 
