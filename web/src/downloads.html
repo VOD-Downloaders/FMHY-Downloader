@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>FMHY Downloader — Downloads</title>
+		<link rel="stylesheet" href="/third-party/bootstrap/css/bootstrap.min.css">
+		<link rel="stylesheet" href="style.css">
+		<script src="/third-party/bootstrap/js/bootstrap.bundle.min.js" defer></script>
+		<script src="components/sidebar.js" defer></script>
+		<script src="app.js" defer></script>
+	</head>
+	<body data-page="downloads">
+		<div class="d-flex" id="app">
+			<component-sidebar></component-sidebar>
+
+			<main id="main-content" class="flex-grow-1 overflow-auto p-4">
+				<h2 class="mb-4">Downloads</h2>
+				<p id="downloads-empty" class="text-muted">No downloads yet.</p>
+				<table class="table table-hover align-middle d-none" id="downloads-table">
+					<thead class="table-dark">
+						<tr>
+							<th scope="col">ID</th>
+							<th scope="col">Output File</th>
+							<th scope="col">Indexer</th>
+							<th scope="col">Status</th>
+							<!-- TODO: progress column once GET /api/downloadStatus/{id} polling is implemented -->
+						</tr>
+					</thead>
+					<tbody id="downloads-tbody"></tbody>
+				</table>
+			</main>
+		</div>
+	</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>FMHY Downloader — Proxy</title>
+		<link rel="stylesheet" href="/third-party/bootstrap/css/bootstrap.min.css">
+		<link rel="stylesheet" href="style.css">
+		<script src="/third-party/bootstrap/js/bootstrap.bundle.min.js" defer></script>
+		<script src="components/sidebar.js" defer></script>
+		<script src="app.js" defer></script>
+	</head>
+	<body data-page="proxy">
+		<div class="d-flex" id="app">
+			<component-sidebar></component-sidebar>
+
+			<main id="main-content" class="flex-grow-1 overflow-auto p-4">
+				<h2 class="mb-4">Proxy</h2>
+				<!-- TODO: FlareSolverr / proxy configuration UI -->
+				<!-- Currently configured via the FLARESOLVERR_URL environment variable -->
+				<div class="alert alert-info" role="alert">
+					Proxy configuration is not yet implemented.<br>
+					Set the <code>FLARESOLVERR_URL</code> environment variable to enable Cloudflare bypass.
+				</div>
+			</main>
+		</div>
+	</body>
+</html>
