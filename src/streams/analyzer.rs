@@ -57,6 +57,11 @@ pub trait Analyzer: Any + Send + Sync {
 pub async fn analyze_url(
     url: &Url, requester_specification: &RequesterSpecification, analyzers: &mut [Box<dyn Analyzer>], analyze_duration: u64,
 ) -> Result<(), AnalyzeError> {
+    trace!(
+        "Starting analysis on \"{}\" with user_agent: {}, headers: {:?}",
+        url, requester_specification.user_agent, requester_specification.headers
+    );
+
     let mut analyzers_copy: Vec<&mut Box<dyn Analyzer>> = analyzers.iter_mut().collect();
 
     let user_agent = "--user-agent=".to_string() + requester_specification.user_agent.as_str();
@@ -136,7 +141,7 @@ pub async fn analyze_url(
         tokio::select! {
             Some(event) = requests.next() => {
                 let request = &event.request;
-                trace!("{} request to {} captured.", request.method, request.url);
+                trace!("{} request to {} captured. Headers: {:?}", request.method, request.url, request.headers);
                 pending.insert(event.request_id.clone(), request.clone());
             },
             Some(event) = responses.next() => {

@@ -20,16 +20,11 @@ impl CurlRequester {
         })
     }
 
-    pub async fn get_file_contents(&self, url: &Url, headers: Option<HeaderMap>) -> Result<Vec<u8>, RequestError> {
-        let mut final_headers: reqwest::header::HeaderMap = self.specification.headers.clone();
-        for (key, val) in &headers.unwrap_or_default() {
-            final_headers.insert(key, val.clone());
-        }
-
+    pub async fn get_file_contents(&self, url: &Url, headers: HeaderMap) -> Result<Vec<u8>, RequestError> {
         let connect_timeout_str = self.specification.connect_timeout.to_string();
         let max_timeout_str = self.specification.max_timeout.to_string();
 
-        let headers: Vec<String> = final_headers
+        let headers: Vec<String> = headers
             .iter()
             .flat_map(|(key, value)| ["-H".to_string(), format!("{}: {}", key, value.to_str().unwrap_or_default())])
             .collect();
