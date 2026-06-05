@@ -125,8 +125,7 @@ COPY --from=rust-builder /build/target/release/${APP_BIN} /app/${APP_BIN}
 RUN chmod +x /app/${APP_BIN} 
 
 # Copy web files
-COPY web/src/ ./web/src
-COPY web/third-party/ ./web/third-party/
+COPY web/src/ ./web
 
 # Copy entrypoint
 COPY entrypoint.sh /entrypoint.sh
