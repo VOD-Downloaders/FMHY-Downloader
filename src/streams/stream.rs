@@ -62,7 +62,7 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
                     };
 
                     if let M3UResult::Index(segments) = result {
-                        return vec![create_stream_from_segments(segments, input_url, M3UResult::DEFAULT_RESOLUTION)];
+                        return vec![create_stream_from_segments(segments, &request.url, M3UResult::DEFAULT_RESOLUTION)];
                     }
                 }
             }
@@ -117,6 +117,9 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
                             };
 
                             if let M3UResult::Index(segments) = index_m3u {
+                                // NOTE: the input_url is not actually used since the segments in a
+                                // master m3u(8) are presumed to be full urls, this may result in a
+                                // logic bug
                                 streams.push(create_stream_from_segments(segments, input_url, (width, height)));
                             } else {
                                 warning!("Expected m3u contents from \"{}\" to be an index file...", index_url);
@@ -138,7 +141,7 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
     }
 }
 
-fn create_stream_from_segments(segments: Vec<String>, input_url: &Url, resolution: (u32, u32)) -> Stream {
+fn create_stream_from_segments(segments: Vec<String>, request_url: &Url, resolution: (u32, u32)) -> Stream {
     let mut url_segments = Vec::with_capacity(segments.len());
 
     for segment in segments {
@@ -146,7 +149,7 @@ fn create_stream_from_segments(segments: Vec<String>, input_url: &Url, resolutio
         let full_url = {
             match segment_url {
                 Ok(url) => url,
-                Err(_error) => input_url.join(".").unwrap().join(segment.as_str()).unwrap(),
+                Err(_error) => request_url.join(".").unwrap().join(segment.as_str()).unwrap(),
             }
         };
         url_segments.push(full_url);
