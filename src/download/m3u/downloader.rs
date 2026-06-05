@@ -21,7 +21,11 @@ pub struct SegmentDownloadArguments {
 pub async fn download_segments(
     segments: Vec<Url>, arguments: SegmentDownloadArguments, requester: &request::Requester, output_file: &mut File,
 ) -> Result<(), DownloadError> {
+    trace!("Starting segments download...");
+
     for segment in segments {
+        trace!("Downloading segment from: \"{}\"...", segment);
+
         let mut last_error: Option<DownloadError> = None;
 
         for attempt in 1..=arguments.segment_retries {
