@@ -86,20 +86,20 @@ pub async fn post_streams(
     })?;
 
     // TODO: Handle cloudflare
-    // let requester = request::Requester::get_curl(request::RequesterSpecification::default()).map_err(|error| ErrorResponse {
-    //     status: StatusCode::PRECONDITION_FAILED,
-    //     error: format!("Unable to create requester object due to error: {}", error),
-    // })?;
+    let requester = request::Requester::get_curl(request::RequesterSpecification::default()).map_err(|error| ErrorResponse {
+        status: StatusCode::PRECONDITION_FAILED,
+        error: format!("Unable to create requester object due to error: {}", error),
+    })?;
 
-    let flaresolverr_url = state.environment.flaresolverr_url.clone().unwrap();
-
-    let requester =
-        request::Requester::get_flaresolvedd_native(request::RequesterSpecification::default(), &flaresolverr_url, &url).map_err(|error| {
-            ErrorResponse {
-                status: StatusCode::PRECONDITION_FAILED,
-                error: format!("Unable to create requester object due to error: {}", error),
-            }
-        })?;
+    // let flaresolverr_url = state.environment.flaresolverr_url.clone().unwrap();
+    //
+    // let requester =
+    //     request::Requester::get_flaresolvedd_native(request::RequesterSpecification::default(), &flaresolverr_url, &url).map_err(|error| {
+    //         ErrorResponse {
+    //             status: StatusCode::PRECONDITION_FAILED,
+    //             error: format!("Unable to create requester object due to error: {}", error),
+    //         }
+    //     })?;
 
     let streams = streams::get_streams(&indexer, &requester, &url).await;
 

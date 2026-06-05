@@ -53,6 +53,8 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
                 let m3u_analyzer = analyzers[0].as_any_mut().downcast_mut::<M3UAnalyzer>().unwrap();
 
                 for request in m3u_analyzer.requests.drain(..) {
+                    trace!("Analyzing request to \"{}\" for index m3u(8).", request.url);
+
                     let parse_result = parse_m3u_contents(request.contents.as_str());
                     let Ok(result) = parse_result else {
                         error!("[Attempt {}/{}] Parsing M3U faild with error: {}", attempt, specification.retries, parse_result.unwrap_err());
@@ -80,6 +82,8 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
                 let m3u_analyzer = analyzers[0].as_any_mut().downcast_mut::<M3UAnalyzer>().unwrap();
 
                 for request in m3u_analyzer.requests.drain(..) {
+                    trace!("Analyzing request to \"{}\" for master m3u(8).", request.url);
+
                     let parse_result = parse_m3u_contents(request.contents.as_str());
                     let Ok(result) = parse_result else {
                         error!("[Attempt {}/{}] Parsing M3U faild with error: {}", attempt, specification.retries, parse_result.unwrap_err());
@@ -90,6 +94,8 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
                         let mut streams = Vec::new();
 
                         for ((width, height), index_url) in indexes {
+                            trace!("Sending request to \"{}\" for index m3u(8).", index_url);
+
                             let index_m3u_bytes = requester.get_file_contents(&index_url, None).await;
                             let Ok(index_m3u_bytes) = index_m3u_bytes else {
                                 error!("Failed to get index m3u response from \"{}\" due to error: {}", index_url, index_m3u_bytes.unwrap_err());
@@ -101,6 +107,8 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
                                 error!("Failed to read index m3u with error: {}", index_m3u_str.unwrap_err());
                                 continue;
                             };
+
+                            trace!("Analyzing request to \"{}\" for index m3u(8).", index_url);
 
                             let index_m3u = parse_m3u_contents(index_m3u_str.as_str());
                             let Ok(index_m3u) = index_m3u else {
