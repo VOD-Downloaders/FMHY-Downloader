@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>FMHY Downloader — Indexers</title>
+		<link rel="stylesheet" href="/third-party/bootstrap/css/bootstrap.min.css">
+		<link rel="stylesheet" href="style.css">
+		<script src="/third-party/bootstrap/js/bootstrap.bundle.min.js" defer></script>
+		<script src="components/sidebar.js" defer></script>
+		<script src="app.js" defer></script>
+	</head>
+	<body data-page="indexers">
+		<div class="d-flex" id="app">
+			<component-sidebar></component-sidebar>
+
+			<main id="main-content" class="flex-grow-1 overflow-auto p-4">
+				<h2 class="mb-4">Indexers</h2>
+
+				<!-- Create indexer from a specification -->
+				<div class="card mb-4">
+					<div class="card-header fw-semibold">Create Indexer</div>
+					<div class="card-body">
+						<div class="mb-3">
+							<label class="form-label" for="indexer-spec">Based on specification</label>
+							<select class="form-select" id="indexer-spec">
+								<option value="">— select specification —</option>
+							</select>
+						</div>
+
+						<div id="indexer-form" class="d-none">
+							<div class="row g-3">
+								<div class="col-md-6">
+									<label class="form-label" for="indexer-name">Name</label>
+									<input type="text" class="form-control" id="indexer-name">
+								</div>
+								<div class="col-md-6">
+									<label class="form-label" for="indexer-url">URL</label>
+									<select class="form-select" id="indexer-url">
+										<!-- populated with the specification's main URL + mirrors -->
+									</select>
+								</div>
+							</div>
+
+							<div class="form-check form-switch mt-3">
+								<input class="form-check-input" type="checkbox" id="indexer-cloudflare">
+								<label class="form-check-label" for="indexer-cloudflare">Uses Cloudflare</label>
+							</div>
+
+							<hr>
+
+							<h6 class="fw-semibold">Download method</h6>
+							<p class="text-muted small mb-2">Method type is locked to the specification.</p>
+							<div class="row g-3">
+								<div class="col-md-4">
+									<label class="form-label" for="indexer-method">Method</label>
+									<select class="form-select" id="indexer-method" disabled>
+										<option value="index">index</option>
+										<option value="master">master</option>
+										<option value="mp4">mp4</option>
+									</select>
+								</div>
+								<div class="col-md-4">
+									<label class="form-label" for="indexer-wait-time">Wait time (s)</label>
+									<input type="number" min="0" class="form-control" id="indexer-wait-time">
+								</div>
+								<div class="col-md-4">
+									<label class="form-label" for="indexer-retries">Retries</label>
+									<input type="number" min="0" class="form-control" id="indexer-retries">
+								</div>
+							</div>
+
+							<hr>
+
+							<h6 class="fw-semibold">Segment timeouts</h6>
+							<div class="row g-3">
+								<div class="col-md-6">
+									<label class="form-label" for="indexer-segment-timeout">Segment timeout (s)</label>
+									<input type="number" min="0" class="form-control" id="indexer-segment-timeout">
+								</div>
+								<div class="col-md-6">
+									<label class="form-label" for="indexer-segment-attempts">Segment attempts</label>
+									<input type="number" min="0" class="form-control" id="indexer-segment-attempts">
+								</div>
+							</div>
+
+							<div id="indexer-error" class="text-danger mt-3 d-none"></div>
+							<button class="btn btn-primary mt-3" id="btn-create-indexer" type="button">
+								Create Indexer
+							</button>
+						</div>
+					</div>
+				</div>
+
+				<!-- Active indexers -->
+				<h5 class="mb-3">Active Indexers</h5>
+				<p id="indexers-empty" class="text-muted">No active indexers.</p>
+				<table class="table table-hover align-middle d-none" id="indexers-table">
+					<thead class="table-dark">
+						<tr>
+							<th scope="col">Name</th>
+							<th scope="col">URL</th>
+							<th scope="col">Cloudflare</th>
+							<th scope="col">Method</th>
+						</tr>
+					</thead>
+					<tbody id="indexers-tbody"></tbody>
+				</table>
+			</main>
+		</div>
+	</body>
+</html>

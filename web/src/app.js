@@ -74,6 +74,35 @@ const App = {
         return data.indexers || [];
     },
 
+    async fetchIndexerSpecifications() {
+        const res = await fetch("/api/indexers/specifications");
+
+        if (!res.ok) {
+            throw new Error(res.statusText);
+        }
+
+        const data = await res.json();
+
+        return data.indexers || [];
+    },
+
+    async createIndexer(indexer) {
+        // TODO: backend endpoint `POST /api/indexers` is not implemented yet.
+        const res = await fetch("/api/indexers", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(indexer),
+        });
+
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+
+            throw new Error(data.error || res.statusText);
+        }
+
+        return res.json().catch(() => ({}));
+    },
+
     async fetchStreams(indexerName, url) {
         const res = await fetch("/api/streams", {
             method: "POST",
@@ -187,6 +216,10 @@ const App = {
             });
 
             document.getElementById("btn-get-streams").addEventListener("click", App.handleGetStreams);
+        },
+
+        async indexers() {
+            await App.initIndexersPage();
         },
 
         streams() {
@@ -377,6 +410,158 @@ const App = {
             tbody.appendChild(tr);
         });
         // TODO: poll GET /api/downloadStatus/{id} for live status updates
+    },
+
+    // Indexers page
+
+    async initIndexersPage() {
+        // Load specifications (to create from) and the already-active indexers (to list).
+        try {
+            App.specifications = await App.fetchIndexerSpecifications();
+        } catch {
+            App.specifications = [];
+        }
+        await App.loadIndexers();
+
+        const specSelect = document.getElementById("indexer-spec");
+
+        App.specifications.forEach((spec, i) => {
+            const opt = document.createElement("option");
+
+            opt.value = String(i);
+            opt.textContent = spec.name;
+            specSelect.appendChild(opt);
+        });
+
+        specSelect.addEventListener("change", () => {
+            const index = specSelect.value;
+
+            if (index === "") {
+                document.getElementById("indexer-form").classList.add("d-none");
+                return;
+            }
+
+            App.prefillIndexerForm(App.specifications[parseInt(index, 10)]);
+            document.getElementById("indexer-form").classList.remove("d-none");
+        });
+
+        document.getElementById("btn-create-indexer").addEventListener("click", App.handleCreateIndexer);
+
+        App.renderActiveIndexers();
+    },
+
+    prefillIndexerForm(spec) {
+        const method = spec.download.method;
+        const pre = spec.download.segment_pre_download;
+
+        document.getElementById("indexer-name").value = spec.name;
+        document.getElementById("indexer-cloudflare").checked = spec.uses_cloudflare;
+
+        // URL is a dropdown of the spec's main URL plus any mirrors.
+        const urlSelect = document.getElementById("indexer-url");
+
+        urlSelect.innerHTML = "";
+        [spec.url, ...(spec.mirrors || [])].forEach((url) => {
+            const opt = document.createElement("option");
+
+            opt.value = url;
+            opt.textContent = url;
+            urlSelect.appendChild(opt);
+        });
+
+        // Method type is locked to the spec; wait_time and retries are editable defaults.
+        document.getElementById("indexer-method").value = method.type;
+        document.getElementById("indexer-wait-time").value = method.wait_time;
+        document.getElementById("indexer-retries").value = method.retries;
+
+        // Editable fields.
+        document.getElementById("indexer-segment-timeout").value = pre.segment_timeout;
+        document.getElementById("indexer-segment-attempts").value = pre.segment_attempts;
+    },
+
+    async handleCreateIndexer() {
+        const errorEl = document.getElementById("indexer-error");
+        const btn = document.getElementById("btn-create-indexer");
+
+        errorEl.classList.add("d-none");
+
+        const name = document.getElementById("indexer-name").value.trim();
+        const url = document.getElementById("indexer-url").value;
+
+        if (name === "" || url === "") {
+            errorEl.textContent = "Name and URL are required.";
+            errorEl.classList.remove("d-none");
+            return;
+        }
+
+        const specIndex = document.getElementById("indexer-spec").value;
+        const spec = App.specifications[parseInt(specIndex, 10)];
+
+        // Headers and byte removal are taken from the specification (not shown in the UI). The method
+        // type is locked to the spec, but wait_time/retries, timeouts, URL, name and Cloudflare are editable.
+        const indexer = {
+            name: name,
+            url: url,
+            uses_cloudflare: document.getElementById("indexer-cloudflare").checked,
+            download: {
+                method: {
+                    type: spec.download.method.type,
+                    wait_time: Number(document.getElementById("indexer-wait-time").value),
+                    retries: Number(document.getElementById("indexer-retries").value),
+                },
+                segment_pre_download: {
+                    segment_timeout: Number(document.getElementById("indexer-segment-timeout").value),
+                    segment_attempts: Number(document.getElementById("indexer-segment-attempts").value),
+                    headers: spec.download.segment_pre_download.headers,
+                },
+                segment_post_download: spec.download.segment_post_download,
+            },
+            // NOTE: the specifications API doesn't expose the source file path, so this is a best-effort
+            // guess. The (not-yet-implemented) backend endpoint should set `based_on` authoritatively.
+            based_on: "/config/indexers/specifications/" + (spec ? spec.name.toLowerCase() : name.toLowerCase()) + ".json",
+        };
+
+        btn.disabled = true;
+
+        try {
+            await App.createIndexer(indexer);
+            window.location.reload();
+        } catch (err) {
+            errorEl.textContent = "Failed to create indexer: " + err.message;
+            errorEl.classList.remove("d-none");
+        } finally {
+            btn.disabled = false;
+        }
+    },
+
+    renderActiveIndexers() {
+        const indexers = App.indexers;
+        const emptyEl = document.getElementById("indexers-empty");
+        const table = document.getElementById("indexers-table");
+        const tbody = document.getElementById("indexers-tbody");
+
+        if (indexers.length === 0) {
+            emptyEl.classList.remove("d-none");
+            table.classList.add("d-none");
+            return;
+        }
+
+        emptyEl.classList.add("d-none");
+        table.classList.remove("d-none");
+        tbody.innerHTML = "";
+
+        indexers.forEach((indexer) => {
+            const method = indexer.download && indexer.download.method ? indexer.download.method.type : "—";
+            const tr = document.createElement("tr");
+
+            tr.innerHTML =
+                "<td>" + App.escapeHtml(indexer.name) + "</td>" +
+                "<td>" + App.escapeHtml(indexer.url) + "</td>" +
+                "<td>" + (indexer.uses_cloudflare ? "yes" : "no") + "</td>" +
+                "<td>" + App.escapeHtml(method) + "</td>";
+
+            tbody.appendChild(tr);
+        });
     },
 };
 
