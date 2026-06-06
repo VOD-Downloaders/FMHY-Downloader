@@ -81,9 +81,7 @@ The container is configured through environment variables:
 |---|---|---|
 | `LOG_LEVEL` | `info` | Log verbosity: `debug` / `info` / `warning` / `error` |
 | `WEBUI_PORT` | `8080` | Port the WebUI/API listens on |
-| `FLARESOLVERR_URL` | `http://flaresolverr:8191/v1` | FlareSolverr endpoint (may be empty) |
-| `SEGMENT_DOWNLOAD_TIMEOUT` | `5` | Per-segment download timeout (seconds) |
-| `SEGMENT_RETRY_ATTEMPTS` | `3` | Per-segment retry count |
+| `FLARESOLVERR_URL` | - | FlareSolverr endpoint (may be empty) |
 
 ## API
 
