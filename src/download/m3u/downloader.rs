@@ -20,7 +20,7 @@ pub struct SegmentDownloadArguments {
 // Download
 /////////////////////////////////////////////////////
 pub async fn download_segments(
-    indexer: &config::Indexer, segments: Vec<Url>, arguments: SegmentDownloadArguments, requester: &request::Requester, output_file: &mut File,
+    indexer: &config::Indexer, segments: Vec<Url>, requester: &request::Requester, output_file: &mut File,
 ) -> Result<(), DownloadError> {
     trace!("Starting segments download...");
 
@@ -29,8 +29,8 @@ pub async fn download_segments(
 
         let mut last_error: Option<DownloadError> = None;
 
-        for attempt in 1..=arguments.segment_retries {
-            match download_segment(indexer, &segment, &arguments, requester, output_file).await {
+        for attempt in 1..=indexer.download.segment_pre_download.segment_attempts {
+            match download_segment(indexer, &segment, requester, output_file).await {
                 Ok(_) => {
                     last_error = None;
                     break;
@@ -39,7 +39,7 @@ pub async fn download_segments(
                     warning!(
                         "[Attempt {}/{}] For segment \"{}\" failed with error: {}.",
                         attempt,
-                        arguments.segment_retries,
+                        indexer.download.segment_pre_download.segment_attempts,
                         segment.as_str(),
                         error
                     );
@@ -57,10 +57,8 @@ pub async fn download_segments(
     Ok(())
 }
 
-async fn download_segment(
-    indexer: &config::Indexer, url: &Url, arguments: &SegmentDownloadArguments, requester: &request::Requester, output_file: &mut File,
-) -> Result<(), DownloadError> {
-    let mut preprocessing = arguments.segment_preprocessing.clone();
+async fn download_segment(indexer: &config::Indexer, url: &Url, requester: &request::Requester, output_file: &mut File) -> Result<(), DownloadError> {
+    let mut preprocessing = indexer.download.segment_pre_download.clone();
     preprocessing.resolve_variables(&indexer.url, url);
 
     let contents = requester
@@ -68,14 +66,16 @@ async fn download_segment(
         .await
         .map_err(DownloadError::RequestFailed)?;
 
-    if contents.len() <= (arguments.segment_postprocessing.remove_front_bytes + arguments.segment_postprocessing.remove_back_bytes) as usize {
+    if contents.len()
+        <= (indexer.download.segment_post_download.remove_front_bytes + indexer.download.segment_post_download.remove_back_bytes) as usize
+    {
         return Err(DownloadError::FailedToWriteBytes(
             "Downloaded amount of bytes is less than the amount specified in postprocessing arguments.".to_string(),
         ));
     }
 
-    let clean_bytes = &contents[arguments.segment_postprocessing.remove_front_bytes as usize
-        ..(contents.len() - arguments.segment_postprocessing.remove_back_bytes as usize)];
+    let clean_bytes = &contents[indexer.download.segment_post_download.remove_front_bytes as usize
+        ..(contents.len() - indexer.download.segment_post_download.remove_back_bytes as usize)];
 
     output_file
         .write_all(clean_bytes)

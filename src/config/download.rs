@@ -42,6 +42,8 @@ pub enum DownloadMethod {
 /////////////////////////////////////////////////////
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PreDownloadSpecifiation {
+    pub segment_timeout: u32,
+    pub segment_attempts: u32,
     pub headers: HeaderMap,
 }
 
@@ -64,7 +66,11 @@ impl PreDownloadSpecifiation {
 
 impl Default for PreDownloadSpecifiation {
     fn default() -> Self {
-        Self { headers: HeaderMap::new() }
+        Self {
+            segment_timeout: 5,
+            segment_attempts: 5,
+            headers: HeaderMap::new(),
+        }
     }
 }
 

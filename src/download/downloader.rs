@@ -58,29 +58,6 @@ pub async fn download_stream(
 
     // Download based of of stream_type
     match stream.stream_type {
-        streams::StreamType::M3U(segments) => {
-            let (segment_attempts, segment_timeout) = {
-                match &indexer.download.method {
-                    // TODO: Replace these with environment somehow
-                    config::DownloadMethod::IndexInterception(specification) => (specification.retries, specification.wait_time),
-                    config::DownloadMethod::MasterInterception(specification) => (specification.retries, specification.wait_time),
-                    _ => panic!("Internal logic error, unable to reach this path."),
-                }
-            };
-
-            m3u::download_segments(
-                indexer,
-                segments,
-                m3u::SegmentDownloadArguments {
-                    segment_preprocessing: indexer.download.segment_pre_download.clone(),
-                    segment_postprocessing: indexer.download.segment_post_download.clone(),
-                    segment_timeout: segment_timeout,
-                    segment_retries: segment_attempts,
-                },
-                requester,
-                &mut file,
-            )
-            .await
-        },
+        streams::StreamType::M3U(segments) => m3u::download_segments(indexer, segments, requester, &mut file).await,
     }
 }
