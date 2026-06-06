@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    fmt::format,
     path::PathBuf,
     sync::{Arc, RwLock},
 };
@@ -8,7 +7,7 @@ use std::{
 use url::Url;
 use axum::{
     extract,
-    extract::{State, Path},
+    extract::{State},
     http::{StatusCode},
 };
 

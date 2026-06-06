@@ -19,11 +19,7 @@ use super::m3u;
 pub enum DownloadError {
     #[error("Indexer download type doesn't match stream type passed in")]
     InvalidStreamIndexerCombo,
-    #[error("Failed to retrieve domain from \"{0}\"")]
-    FailedToRetrieveDomainFromURL(Url),
 
-    #[error("Failed to start downloading data from \"{url}\" with error: {error}")]
-    FailedToStart { url: Url, error: String },
     #[error("Failed to open output file \"{file}\" with error: {error}", file = file.display())]
     FailedToOpenOutputFile { file: PathBuf, error: String },
     #[error("Request error: {0}")]

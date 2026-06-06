@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::ops::Deref;
 
 use url::Url;
 use serde::{Serialize, Deserialize};

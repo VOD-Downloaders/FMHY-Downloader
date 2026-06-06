@@ -9,7 +9,6 @@ use super::parse_m3u_contents;
 use super::super::config;
 use super::super::config::DownloadMethod;
 use super::super::request::Requester;
-use super::super::request::HeaderMap;
 
 /////////////////////////////////////////////////////
 // StreamType
@@ -136,7 +135,7 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
 
             Vec::new()
         },
-        DownloadMethod::MP4Interception(specification) => {
+        DownloadMethod::MP4Interception(_specification) => {
             todo!()
         },
     }

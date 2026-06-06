@@ -16,8 +16,6 @@ pub enum EnvError {
     InvalidLogLevel { log_level: String },
     #[error("Expected WEBUI_PORT to be a 16 bit unsigned integer, got: {port}")]
     InvalidWebUIPort { port: String },
-    #[error("Expected MAX_INDEX_ATTEMPTS to be an 8 bit unsigned integer higher than 0, got: {attempts}")]
-    InvalidIndexFindAttempts { attempts: String },
     #[error("Expected SEGMENT_DOWNLOAD_TIMEOUT to be an 8 bit unsigned integer higher than 0, got: {timeout}")]
     InvalidSegmentTimeout { timeout: String },
     #[error("Expected SEGMENT_RETRY_ATTEMPTS to be an 8 bit unsigned integer higher than 0, got: {attempts}")]
