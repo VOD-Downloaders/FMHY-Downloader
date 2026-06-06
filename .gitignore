@@ -26,5 +26,8 @@
 /output/
 /config/
 
+# Web
+/web/node_modules/
+
 # AI Tools
 CLAUDE.md
