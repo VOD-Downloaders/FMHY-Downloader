@@ -47,7 +47,7 @@ pub trait Analyzer: Any + Send + Sync {
     // NOTE: When returning true this analyzer signals it's done analyzing requests and may stop early
     fn analyze(&mut self, request: &BrowserRequest, response: &BrowserResponse, body: Option<String>) -> bool;
 
-    fn as_any(&self) -> &dyn Any;
+    // fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
@@ -57,20 +57,26 @@ pub trait Analyzer: Any + Send + Sync {
 pub async fn analyze_url(
     url: &Url, requester_specification: &RequesterSpecification, analyzers: &mut [Box<dyn Analyzer>], analyze_duration: u64,
 ) -> Result<(), AnalyzeError> {
+    trace!(
+        "Starting analysis on \"{}\" with user_agent: {}, headers: {:?}",
+        url, requester_specification.user_agent, requester_specification.headers
+    );
+
     let mut analyzers_copy: Vec<&mut Box<dyn Analyzer>> = analyzers.iter_mut().collect();
 
-    let user_agent = "--user-agent=".to_string() + requester_specification.user_agent.as_str();
+    let user_agent = "user-agent=".to_string() + requester_specification.user_agent.as_str();
 
     let (mut browser, mut handler) = Browser::launch(
         BrowserConfig::builder()
             .chrome_executable(CHROMIUM_PATH)
             .no_sandbox()
-            .new_headless_mode()
+            .with_head() // Force to run browser with head (in Xvfb)
             .args(vec![
-                "--disable-setuid-sandbox",
-                "--disable-gpu",
-                "--disable-dev-shm-usage",
-                "--autoplay-policy=no-user-gesture-required",
+                "disable-setuid-sandbox",
+                // "disable-gpu", // The browser runs in Xvfb
+                "disable-dev-shm-usage",
+                "autoplay-policy=no-user-gesture-required",
+                "disable-blink-features=AutomationControlled", // Removes navigator.webdriver flag
                 user_agent.as_str(),
             ])
             .build()
@@ -136,7 +142,7 @@ pub async fn analyze_url(
         tokio::select! {
             Some(event) = requests.next() => {
                 let request = &event.request;
-                trace!("{} request to {} captured.", request.method, request.url);
+                trace!("{} request to {} captured. Headers: {:?}", request.method, request.url, request.headers);
                 pending.insert(event.request_id.clone(), request.clone());
             },
             Some(event) = responses.next() => {

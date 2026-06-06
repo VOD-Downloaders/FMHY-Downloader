@@ -19,11 +19,7 @@ use super::m3u;
 pub enum DownloadError {
     #[error("Indexer download type doesn't match stream type passed in")]
     InvalidStreamIndexerCombo,
-    #[error("Failed to retrieve domain from \"{0}\"")]
-    FailedToRetrieveDomainFromURL(Url),
 
-    #[error("Failed to start downloading data from \"{url}\" with error: {error}")]
-    FailedToStart { url: Url, error: String },
     #[error("Failed to open output file \"{file}\" with error: {error}", file = file.display())]
     FailedToOpenOutputFile { file: PathBuf, error: String },
     #[error("Request error: {0}")]
@@ -65,6 +61,7 @@ pub async fn download_stream(
         streams::StreamType::M3U(segments) => {
             let (segment_attempts, segment_timeout) = {
                 match &indexer.download.method {
+                    // TODO: Replace these with environment somehow
                     config::DownloadMethod::IndexInterception(specification) => (specification.retries, specification.wait_time),
                     config::DownloadMethod::MasterInterception(specification) => (specification.retries, specification.wait_time),
                     _ => panic!("Internal logic error, unable to reach this path."),
@@ -72,9 +69,11 @@ pub async fn download_stream(
             };
 
             m3u::download_segments(
+                indexer,
                 segments,
                 m3u::SegmentDownloadArguments {
-                    segment_preprocessing: indexer.download.segment_processing.clone(),
+                    segment_preprocessing: indexer.download.segment_pre_download.clone(),
+                    segment_postprocessing: indexer.download.segment_post_download.clone(),
                     segment_timeout: segment_timeout,
                     segment_retries: segment_attempts,
                 },

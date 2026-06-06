@@ -5,6 +5,7 @@ use rand::prelude::*;
 use super::NativeRequester;
 use super::CurlRequester;
 use super::FlaresolveddRequester;
+use super::HeaderMap;
 
 /////////////////////////////////////////////////////
 // RequestError
@@ -24,8 +25,6 @@ pub enum RequestError {
 /////////////////////////////////////////////////////
 // RequesterSpecification
 /////////////////////////////////////////////////////
-pub type HeaderMap = reqwest::header::HeaderMap;
-
 pub struct RequesterSpecification {
     pub user_agent: String,
     pub headers: HeaderMap,
@@ -72,10 +71,17 @@ impl Requester {
     }
 
     pub async fn get_file_contents(&self, url: &Url, headers: Option<HeaderMap>) -> Result<Vec<u8>, RequestError> {
+        let mut final_headers: HeaderMap = self.get_specification().headers.clone();
+        for (key, val) in &headers.unwrap_or_default() {
+            final_headers.insert(key, val.clone());
+        }
+
+        trace!("Retrieving file contents from \"{}\", user_agent: {}, headers: {:?}", url, self.get_specification().user_agent, final_headers);
+
         match self {
-            Requester::Native(instance) => instance.get_file_contents(url, headers).await,
-            Requester::Curl(instance) => instance.get_file_contents(url, headers).await,
-            Requester::Flaresolvedd(instance) => instance.get_file_contents(url, headers).await,
+            Requester::Native(instance) => instance.get_file_contents(url, final_headers).await,
+            Requester::Curl(instance) => instance.get_file_contents(url, final_headers).await,
+            Requester::Flaresolvedd(instance) => instance.get_file_contents(url, final_headers).await,
         }
     }
 

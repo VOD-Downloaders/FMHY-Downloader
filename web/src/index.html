@@ -3,10 +3,39 @@
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<title></title>
-		<link href="css/style.css" rel="stylesheet">
+		<title>FMHY Downloader — Home</title>
+		<link rel="stylesheet" href="/third-party/bootstrap/css/bootstrap.min.css">
+		<link rel="stylesheet" href="style.css">
+		<script src="/third-party/bootstrap/js/bootstrap.bundle.min.js" defer></script>
+		<script src="components/sidebar.js" defer></script>
+		<script src="app.js" defer></script>
 	</head>
-	<body>
-		<h1>AAA</h1>	
+	<body data-page="home">
+		<div class="d-flex" id="app">
+			<component-sidebar></component-sidebar>
+
+			<main id="main-content" class="flex-grow-1 overflow-auto p-4">
+				<h2 class="mb-4">Home</h2>
+				<div class="row g-3 mb-4">
+					<div class="col-sm-6 col-md-3">
+						<div class="card border-0 bg-primary text-white shadow-sm h-100">
+							<div class="card-body">
+								<div class="small text-white-50 mb-1">Active Indexers</div>
+								<div class="fs-3 fw-bold" id="stat-indexers">—</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-sm-6 col-md-3">
+						<div class="card border-0 bg-success text-white shadow-sm h-100">
+							<div class="card-body">
+								<div class="small text-white-50 mb-1">Downloads Started</div>
+								<div class="fs-3 fw-bold" id="stat-downloads">0</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<!-- TODO: recent activity / download history -->
+			</main>
+		</div>
 	</body>
 </html>

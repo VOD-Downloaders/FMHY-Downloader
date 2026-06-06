@@ -31,16 +31,11 @@ impl NativeRequester {
         })
     }
 
-    pub async fn get_file_contents(&self, url: &Url, headers: Option<HeaderMap>) -> Result<Vec<u8>, RequestError> {
-        let mut final_headers: reqwest::header::HeaderMap = self.specification.headers.clone();
-        for (key, val) in &headers.unwrap_or_default() {
-            final_headers.insert(key, val.clone());
-        }
-
+    pub async fn get_file_contents(&self, url: &Url, headers: HeaderMap) -> Result<Vec<u8>, RequestError> {
         let response = self
             .client
             .get(url.as_str())
-            .headers(final_headers)
+            .headers(headers.0)
             .send()
             .map_err(|error| RequestError::RequestFailedToSend(error.to_string()))?;
 

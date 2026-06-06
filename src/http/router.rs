@@ -1,5 +1,3 @@
-use std::path::Path;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use serde_json::json;
@@ -29,8 +27,7 @@ pub struct Router {
 }
 
 impl Router {
-    const WEB_SRC_DIRECTORY: &str = "/app/web/src/";
-    const WEB_THIRD_PARTY_DIRECTORY: &str = "/app/web/third-party/";
+    const WEB_SRC_DIRECTORY: &str = "/app/web/";
 
     pub async fn new(environment: env::EnvOptions, state: config::State) -> Result<Self, RouteError> {
         let address = "0.0.0.0:".to_string() + environment.webui_port.to_string().as_str();
@@ -81,21 +78,7 @@ impl Router {
         }
     }
 
-    fn get_file_contents(path: &Path) -> String {
-        match std::fs::read_to_string(path) {
-            Ok(contents) => {
-                trace!("Read {}'s contents.", path.display());
-                contents
-            },
-            Err(error) => {
-                error!("Failed to read file \"{}\", got error: {}", path.display(), error);
-                "NOT FOUND".into()
-            },
-        }
-    }
-
     fn init_router(environment: env::EnvOptions, state: config::State) -> axum::Router {
-        let third_party_service = ServeDir::new(Self::WEB_THIRD_PARTY_DIRECTORY);
         let web_source_service = ServeDir::new(Self::WEB_SRC_DIRECTORY).append_index_html_on_directories(true);
 
         let router = axum::Router::new()
@@ -107,7 +90,6 @@ impl Router {
             .route("/api/download", routing::post(api::post_download))
 
             // Dependencies & Web source
-            .nest_service("/third-party", third_party_service)
             .fallback_service(web_source_service)
 
             // State
