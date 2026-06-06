@@ -60,7 +60,5 @@ if [ ! -S /tmp/.X11-unix/X99 ]; then
     exit 1
 fi
 
-echo "Xvfb ready on $DISPLAY"
-
 # --- Drop privileges ---
 exec gosu "$PUID:$PGID" "$@"
