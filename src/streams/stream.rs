@@ -16,12 +16,12 @@ use super::super::request::HeaderMap;
 /////////////////////////////////////////////////////
 #[derive(Debug, Serialize, Deserialize)]
 pub enum StreamType {
-    M3U(Vec<Url>, HeaderMap),
+    M3U(Vec<Url>),
 }
 
 impl Default for StreamType {
     fn default() -> Self {
-        StreamType::M3U(Vec::new(), HeaderMap::new())
+        StreamType::M3U(Vec::new())
     }
 }
 
@@ -51,12 +51,6 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
                     continue;
                 }
 
-                let headers = {
-                    let mut headers = HeaderMap::new();
-                    headers.insert("Referer", indexer.url.clone().as_str().parse().unwrap());
-                    headers
-                };
-
                 let m3u_analyzer = analyzers[0].as_any_mut().downcast_mut::<M3UAnalyzer>().unwrap();
 
                 for request in m3u_analyzer.requests.drain(..) {
@@ -69,12 +63,7 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
                     };
 
                     if let M3UResult::Index(segments) = result {
-                        return vec![create_stream_from_segments(
-                            segments,
-                            &request.url,
-                            headers,
-                            M3UResult::DEFAULT_RESOLUTION,
-                        )];
+                        return vec![create_stream_from_segments(segments, &request.url, M3UResult::DEFAULT_RESOLUTION)];
                     }
                 }
             }
@@ -90,12 +79,6 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
                     error!("[Attempt {}/{}] Analyzing requests for {} failed with error: {}", attempt, specification.retries, input_url, error);
                     continue;
                 }
-
-                let headers = {
-                    let mut headers = HeaderMap::new();
-                    headers.insert("Referer", indexer.url.clone().as_str().parse().unwrap());
-                    headers
-                };
 
                 let m3u_analyzer = analyzers[0].as_any_mut().downcast_mut::<M3UAnalyzer>().unwrap();
 
@@ -138,7 +121,7 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
                                 // NOTE: the input_url is not actually used since the segments in a
                                 // master m3u(8) are presumed to be full urls, this may result in a
                                 // logic bug
-                                streams.push(create_stream_from_segments(segments, input_url, headers.clone(), (width, height)));
+                                streams.push(create_stream_from_segments(segments, input_url, (width, height)));
                             } else {
                                 warning!("Expected m3u contents from \"{}\" to be an index file...", index_url);
                             }
@@ -159,7 +142,7 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
     }
 }
 
-fn create_stream_from_segments(segments: Vec<String>, request_url: &Url, header_for_segments: HeaderMap, resolution: (u32, u32)) -> Stream {
+fn create_stream_from_segments(segments: Vec<String>, request_url: &Url, resolution: (u32, u32)) -> Stream {
     let mut url_segments = Vec::with_capacity(segments.len());
 
     for segment in segments {
@@ -176,6 +159,6 @@ fn create_stream_from_segments(segments: Vec<String>, request_url: &Url, header_
     Stream {
         width: resolution.0,
         height: resolution.1,
-        stream_type: StreamType::M3U(url_segments, header_for_segments),
+        stream_type: StreamType::M3U(url_segments),
     }
 }

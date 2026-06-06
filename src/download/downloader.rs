@@ -39,10 +39,9 @@ pub async fn download_stream(
     indexer: &config::Indexer, stream: streams::Stream, requester: &request::Requester, output_file: &Path,
 ) -> Result<(), DownloadError> {
     // Check of indexer's download_method against stream's stream_type
-    if (matches!(indexer.download.method, config::DownloadMethod::IndexInterception(_))
-        && !matches!(stream.stream_type, streams::StreamType::M3U(_, _)))
+    if (matches!(indexer.download.method, config::DownloadMethod::IndexInterception(_)) && !matches!(stream.stream_type, streams::StreamType::M3U(_)))
         || (matches!(indexer.download.method, config::DownloadMethod::MasterInterception(_))
-            && !matches!(stream.stream_type, streams::StreamType::M3U(_, _)))
+            && !matches!(stream.stream_type, streams::StreamType::M3U(_)))
     {
         return Err(DownloadError::InvalidStreamIndexerCombo);
     }
@@ -63,7 +62,7 @@ pub async fn download_stream(
 
     // Download based of of stream_type
     match stream.stream_type {
-        streams::StreamType::M3U(segments, headers) => {
+        streams::StreamType::M3U(segments) => {
             let (segment_attempts, segment_timeout) = {
                 match &indexer.download.method {
                     // TODO: Replace these with environment somehow
@@ -74,10 +73,11 @@ pub async fn download_stream(
             };
 
             m3u::download_segments(
+                indexer,
                 segments,
                 m3u::SegmentDownloadArguments {
-                    headers: headers,
-                    segment_preprocessing: indexer.download.segment_processing.clone(),
+                    segment_preprocessing: indexer.download.segment_pre_download.clone(),
+                    segment_postprocessing: indexer.download.segment_post_download.clone(),
                     segment_timeout: segment_timeout,
                     segment_retries: segment_attempts,
                 },
