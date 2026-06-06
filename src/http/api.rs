@@ -52,17 +52,20 @@ pub async fn get_indexers(State(state): State<Arc<AppState>>) -> Result<Indexers
 }
 
 pub async fn post_create_indexer(
-    State(_state): State<Arc<AppState>>, extract::Json(payload): extract::Json<CreateIndexerRequest>,
+    State(state): State<Arc<AppState>>, extract::Json(payload): extract::Json<CreateIndexerRequest>,
 ) -> Result<CreateIndexerResponse, ErrorResponse> {
     trace!("Received post_create_indexer for {:?}", payload);
 
-    let path = PathBuf::from(config::INDEXERS_DIR.to_string() + payload.indexer.name.as_str() + ".json");
+    let path = PathBuf::from(config::INDEXERS_DIR.to_string() + payload.indexer.name.to_lowercase().as_str() + ".json");
     config::write_indexer_to_file(&payload.indexer, path.as_path())
         .await
         .map_err(|error| ErrorResponse {
             status: StatusCode::BAD_REQUEST,
             error: format!("Unable to write indexer to file due to error: {}", error),
         })?;
+
+    // Update indexers in state
+    state.state.write().unwrap().indexers = config::load_indexers().await;
 
     Ok(CreateIndexerResponse { status: StatusCode::OK })
 }

@@ -120,13 +120,19 @@ pub async fn parse_indexer_from_file(file: &Path) -> Result<Indexer, ParseIndexE
 }
 
 pub async fn write_indexer_to_file(indexer: &Indexer, file: &Path) -> Result<(), WriteIndexerError> {
-    trace!("Opening state.json for writing...");
+    trace!("Opening \"{}\" for writing...", file.display());
 
     let mut output_file = OpenOptions::new()
         .create(true)
+        .write(true)
+        .truncate(true)
         .open(file)
         .await
-        .map_err(|error| WriteIndexerError::FailedToOpenFile(file.to_path_buf(), error))?;
+        .map_err(|error| {
+            trace!("Failed to open \"{}\", error: {:?}, source: {:?}", file.display(), error, error.source());
+
+            WriteIndexerError::FailedToOpenFile(file.to_path_buf(), error)
+        })?;
 
     let json = serde_json::to_string(indexer).map_err(|_error| WriteIndexerError::UnableToConvertToJson)?;
 

@@ -87,11 +87,12 @@ const App = {
     },
 
     async createIndexer(indexer) {
-        // TODO: backend endpoint `POST /api/indexers` is not implemented yet.
-        const res = await fetch("/api/indexers", {
+        // POST /api/indexers/create expects the indexer wrapped under an `indexer` key and
+        // returns a status code with no body.
+        const res = await fetch("/api/indexers/create", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(indexer),
+            body: JSON.stringify({ indexer: indexer }),
         });
 
         if (!res.ok) {
@@ -99,8 +100,6 @@ const App = {
 
             throw new Error(data.error || res.statusText);
         }
-
-        return res.json().catch(() => ({}));
     },
 
     async fetchStreams(indexerName, url) {
@@ -516,9 +515,7 @@ const App = {
                 },
                 segment_post_download: spec.download.segment_post_download,
             },
-            // NOTE: the specifications API doesn't expose the source file path, so this is a best-effort
-            // guess. The (not-yet-implemented) backend endpoint should set `based_on` authoritatively.
-            based_on: "/config/indexers/specifications/" + (spec ? spec.name.toLowerCase() : name.toLowerCase()) + ".json",
+            based_on: (spec ? spec.name : name),
         };
 
         btn.disabled = true;
