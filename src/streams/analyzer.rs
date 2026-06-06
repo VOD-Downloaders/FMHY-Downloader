@@ -64,18 +64,19 @@ pub async fn analyze_url(
 
     let mut analyzers_copy: Vec<&mut Box<dyn Analyzer>> = analyzers.iter_mut().collect();
 
-    let user_agent = "--user-agent=".to_string() + requester_specification.user_agent.as_str();
+    let user_agent = "user-agent=".to_string() + requester_specification.user_agent.as_str();
 
     let (mut browser, mut handler) = Browser::launch(
         BrowserConfig::builder()
             .chrome_executable(CHROMIUM_PATH)
             .no_sandbox()
-            .new_headless_mode()
+            .with_head() // Force to run browser with head (in Xvfb)
             .args(vec![
-                "--disable-setuid-sandbox",
-                "--disable-gpu",
-                "--disable-dev-shm-usage",
-                "--autoplay-policy=no-user-gesture-required",
+                "disable-setuid-sandbox",
+                // "disable-gpu", // The browser runs in Xvfb
+                "disable-dev-shm-usage",
+                "autoplay-policy=no-user-gesture-required",
+                "disable-blink-features=AutomationControlled", // Removes navigator.webdriver flag
                 user_agent.as_str(),
             ])
             .build()

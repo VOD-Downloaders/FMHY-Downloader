@@ -46,5 +46,21 @@ if [ $CHOWN_OUTPUT ]; then
   chown -R ${APP_USER}:${APP_USER} /output
 fi
 
+# --- Start virtual X display ---
+Xvfb :99 -screen 0 1920x1080x24 -nolisten tcp &
+export DISPLAY=:99
+
+for _ in $(seq 1 40); do # Wait for the socket
+    [ -S /tmp/.X11-unix/X99 ] && break
+    sleep 0.25
+done
+
+if [ ! -S /tmp/.X11-unix/X99 ]; then
+    echo "[ERROR]: Xvfb failed to start on :99" >&2
+    exit 1
+fi
+
+echo "Xvfb ready on $DISPLAY"
+
 # --- Drop privileges ---
 exec gosu "$PUID:$PGID" "$@"
