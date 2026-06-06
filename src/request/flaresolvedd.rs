@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ops::Deref;
 
 use url::Url;
 use serde::{Serialize, Deserialize};
@@ -188,7 +189,7 @@ impl FlaresolveddRequester {
             let response = self
                 .client
                 .get(url.as_str())
-                .headers(headers)
+                .headers(headers.0)
                 .send()
                 .map_err(|error| RequestError::RequestFailedToSend(error.to_string()))?;
 

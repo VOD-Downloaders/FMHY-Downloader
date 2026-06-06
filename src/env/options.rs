@@ -33,7 +33,6 @@ pub struct EnvOptions {
     pub flaresolverr_url: Option<Url>,
     pub webui_port: u16,
 
-    pub max_index_find_attempts: u8,
     pub segment_download_timeout: u8,
     pub segment_retry_attempts: u8,
 }
@@ -45,7 +44,6 @@ impl Default for EnvOptions {
             flaresolverr_url: None,
             webui_port: 8080,
 
-            max_index_find_attempts: 5,
             segment_download_timeout: 5,
             segment_retry_attempts: 3,
         }
@@ -60,7 +58,6 @@ impl EnvOptions {
         let flaresolverr_url = Self::parse_flaresolverr_url()?;
         let webui_port = Self::parse_webui_port()?;
 
-        let max_index_find_attempts = Self::parse_max_index_attempts()?;
         let segment_download_timeout = Self::parse_segment_download_timeout()?;
         let segment_retry_attempts = Self::parse_segment_retry_attempts()?;
 
@@ -69,7 +66,6 @@ impl EnvOptions {
             flaresolverr_url: flaresolverr_url,
             webui_port: webui_port.unwrap_or(default.webui_port),
 
-            max_index_find_attempts: max_index_find_attempts.unwrap_or(default.max_index_find_attempts),
             segment_download_timeout: segment_download_timeout.unwrap_or(default.segment_download_timeout),
             segment_retry_attempts: segment_retry_attempts.unwrap_or(default.segment_retry_attempts),
         })
@@ -112,24 +108,6 @@ impl EnvOptions {
         let port = port.parse::<u16>().map_err(|_error| EnvError::InvalidWebUIPort { port: port })?;
 
         Ok(Some(port))
-    }
-
-    fn parse_max_index_attempts() -> Result<Option<u8>, EnvError> {
-        let Ok(max_index_attempts) = env::var("MAX_INDEX_ATTEMPTS") else {
-            return Ok(None);
-        };
-
-        let max_index_attempts = max_index_attempts.parse::<u8>().map_err(|_error| EnvError::InvalidIndexFindAttempts {
-            attempts: max_index_attempts,
-        })?;
-
-        if max_index_attempts == 0 {
-            return Err(EnvError::InvalidIndexFindAttempts {
-                attempts: max_index_attempts.to_string(),
-            });
-        }
-
-        Ok(Some(max_index_attempts))
     }
 
     fn parse_segment_download_timeout() -> Result<Option<u8>, EnvError> {

@@ -10,6 +10,7 @@ use super::super::super::request;
 // SegmentDownloadArguments
 /////////////////////////////////////////////////////
 pub struct SegmentDownloadArguments {
+    pub headers: request::HeaderMap,
     pub segment_preprocessing: config::ProcessingSpecification,
     pub segment_retries: u8,
     pub segment_timeout: u8,
@@ -59,7 +60,10 @@ pub async fn download_segments(
 async fn download_segment(
     url: &Url, arguments: &SegmentDownloadArguments, requester: &request::Requester, output_file: &mut File,
 ) -> Result<(), DownloadError> {
-    let contents = requester.get_file_contents(url, None).await.map_err(DownloadError::RequestFailed)?;
+    let contents = requester
+        .get_file_contents(url, Some(arguments.headers.clone()))
+        .await
+        .map_err(DownloadError::RequestFailed)?;
 
     if contents.len() <= arguments.segment_preprocessing.remove_bytes as usize {
         return Err(DownloadError::FailedToWriteBytes(

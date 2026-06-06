@@ -39,9 +39,10 @@ pub async fn download_stream(
     indexer: &config::Indexer, stream: streams::Stream, requester: &request::Requester, output_file: &Path,
 ) -> Result<(), DownloadError> {
     // Check of indexer's download_method against stream's stream_type
-    if (matches!(indexer.download.method, config::DownloadMethod::IndexInterception(_)) && !matches!(stream.stream_type, streams::StreamType::M3U(_)))
+    if (matches!(indexer.download.method, config::DownloadMethod::IndexInterception(_))
+        && !matches!(stream.stream_type, streams::StreamType::M3U(_, _)))
         || (matches!(indexer.download.method, config::DownloadMethod::MasterInterception(_))
-            && !matches!(stream.stream_type, streams::StreamType::M3U(_)))
+            && !matches!(stream.stream_type, streams::StreamType::M3U(_, _)))
     {
         return Err(DownloadError::InvalidStreamIndexerCombo);
     }
@@ -62,9 +63,10 @@ pub async fn download_stream(
 
     // Download based of of stream_type
     match stream.stream_type {
-        streams::StreamType::M3U(segments) => {
+        streams::StreamType::M3U(segments, headers) => {
             let (segment_attempts, segment_timeout) = {
                 match &indexer.download.method {
+                    // TODO: Replace these with environment somehow
                     config::DownloadMethod::IndexInterception(specification) => (specification.retries, specification.wait_time),
                     config::DownloadMethod::MasterInterception(specification) => (specification.retries, specification.wait_time),
                     _ => panic!("Internal logic error, unable to reach this path."),
@@ -74,6 +76,7 @@ pub async fn download_stream(
             m3u::download_segments(
                 segments,
                 m3u::SegmentDownloadArguments {
+                    headers: headers,
                     segment_preprocessing: indexer.download.segment_processing.clone(),
                     segment_timeout: segment_timeout,
                     segment_retries: segment_attempts,

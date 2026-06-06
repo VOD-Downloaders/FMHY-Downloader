@@ -35,7 +35,7 @@ impl NativeRequester {
         let response = self
             .client
             .get(url.as_str())
-            .headers(headers)
+            .headers(headers.0)
             .send()
             .map_err(|error| RequestError::RequestFailedToSend(error.to_string()))?;
 
