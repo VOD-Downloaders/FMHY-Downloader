@@ -146,7 +146,7 @@ pub async fn load_indexer_specifications() -> Vec<IndexerSpecification> {
                 if let Ok(file_type) = entry.file_type()
                     && (!file_type.is_dir() && file_type.is_file())
                 {
-                    trace!("Found indexer path: {}", entry.path().display());
+                    trace!("Found indexer specification path: {}", entry.path().display());
 
                     match parse_indexer_specification_from_file(entry.path().as_path()).await {
                         Ok(specification) => specifications.push(specification),
