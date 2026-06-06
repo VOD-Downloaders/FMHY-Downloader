@@ -15,11 +15,75 @@ A docker container for downloading VODs off of certain [freemediaheckyeah](https
 
 ## Installation
 
-// TODO: ...
+Pre-built images are published to the GitHub Container Registry at
+[`ghcr.io/vod-downloaders/fmhy-downloader`](https://github.com/VOD-Downloaders/FMHY-Downloader/pkgs/container/fmhy-downloader).
+Available tags: `latest` (newest release), `nightly` (latest `dev` build), and per-version tags (e.g. `0.1.0-alpha2`).
+
+The recommended way to run is with Docker Compose. Create a `compose.yaml`:
+
+```yaml
+services:
+  fmhy_downloader:
+    image: ghcr.io/vod-downloaders/fmhy-downloader:latest
+    container_name: fmhy_downloader
+    volumes:
+      - ./config:/config
+      - ./output:/output
+    environment:
+      - LOG_LEVEL=info
+      - FLARESOLVERR_URL=http://flaresolverr:8191/v1
+    ports:
+      - 8080:8080
+    depends_on:
+      flaresolverr:
+        condition: service_healthy
+    restart: unless-stopped
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=info
+    healthcheck:
+      test: sh -c "curl https://www.google.com && curl http://localhost:8191 && curl http://localhost:8191/health"
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+```
+
+Then start it:
+
+```bash
+docker compose up -d
+```
+
+> [!NOTE]
+> `flaresolverr` is only required for Cloudflare-protected sites. If you don't need it, remove the service,
+> the `depends_on` block, and the `FLARESOLVERR_URL` environment variable.
 
 ## Usage
 
-// TODO: ...
+The WebUI is served on [`http://localhost:8080`](http://localhost:8080). 
+
+Use the sidebar to navigate between pages:
+
+1. **Search** – // TODO: Search for a series
+2. **Streams** – Shows available streams for selected episode or movie.
+3. **Downloads** – Shows the downloads you've started. Finished files land in the `./output` directory.
+
+### Configuration
+
+The container is configured through environment variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `LOG_LEVEL` | `info` | Log verbosity: `trace` / `debug` / `info` / `warning` / `error` |
+| `WEBUI_PORT` | `8080` | Port the WebUI/API listens on |
+| `FLARESOLVERR_URL` | - | FlareSolverr endpoint; required for Cloudflare-protected sites |
+| `SEGMENT_DOWNLOAD_TIMEOUT` | `5` | Per-segment download timeout (seconds) |
+| `SEGMENT_RETRY_ATTEMPTS` | `3` | Per-segment retry count |
 
 ## API
 
@@ -27,11 +91,11 @@ The docker container exposes an HTTP server with callable API functions, listed 
 
 | Type | Endpoint | Description | Input | Output |
 |---|---|---|---|---|
-| `GET` | `/health` | Healthcheck endpoint | - | { health } |
-| `GET` | `/api/indexers` | Retrieve active indexers | - | { details } |
-| `GET` | `/api/indexers/specification` | Retrieve usable indexer specifications | - | { details } |
-| `POST` | `/api/download` | Start VOD download | { input_url, output_file } | { id } |
-| `GET` | `/api/downloadStatus/{id}` | Retrieve status of running download | - | { status } |
+| `GET` | `/health` | Healthcheck endpoint | - | `{ health }` |
+| `GET` | `/api/indexers` | Retrieve active indexers | - | `{ indexers }` |
+| `GET` | `/api/indexers/specifications` | Retrieve usable indexer specifications | - | `{ indexers }` |
+| `POST` | `/api/streams` | Analyze a URL and list the available streams | `{ indexer_name, input_url }` | `{ streams }` |
+| `POST` | `/api/download` | Start a VOD download | `{ indexer_name, stream, output_file }` | `{ id }` |
 
 ## Contributing
 
