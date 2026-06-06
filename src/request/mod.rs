@@ -1,5 +1,9 @@
-mod cloudflare;
-mod file;
+mod requester;
+mod native;
+mod curl;
+mod flaresolvedd;
 
-pub use cloudflare::*;
-pub use file::*;
+pub use requester::*;
+pub use native::*;
+pub use curl::*;
+pub use flaresolvedd::*;

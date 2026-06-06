@@ -1,11 +1,11 @@
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::Mutex;
 
 use serde_json::json;
 use thiserror::Error;
 use axum::{routing, response};
+use tower_http::services::ServeDir;
 
 use super::api;
 use super::super::env;
@@ -29,6 +29,9 @@ pub struct Router {
 }
 
 impl Router {
+    const WEB_SRC_DIRECTORY: &str = "/app/web/src/";
+    const WEB_THIRD_PARTY_DIRECTORY: &str = "/app/web/third-party/";
+
     pub async fn new(environment: env::EnvOptions, state: config::State) -> Result<Self, RouteError> {
         let address = "0.0.0.0:".to_string() + environment.webui_port.to_string().as_str();
         let listener = tokio::net::TcpListener::bind(address.as_str())
@@ -91,33 +94,21 @@ impl Router {
         }
     }
 
-    fn make_js(contents: String) -> ([(&'static str, &'static str); 1], String) {
-        ([("content-type", "application/javascript")], contents)
-    }
-
-    fn make_css(contents: String) -> ([(&'static str, &'static str); 1], String) {
-        ([("content-type", "text/css")], contents)
-    }
-
     fn init_router(environment: env::EnvOptions, state: config::State) -> axum::Router {
-        let index = Self::get_file_contents(PathBuf::from("web/index.html").as_path());
-        let style_css = Self::get_file_contents(PathBuf::from("web/style.css").as_path());
-        let index_js = Self::get_file_contents(PathBuf::from("web/index.js").as_path());
+        let third_party_service = ServeDir::new(Self::WEB_THIRD_PARTY_DIRECTORY);
+        let web_source_service = ServeDir::new(Self::WEB_SRC_DIRECTORY).append_index_html_on_directories(true);
 
         let router = axum::Router::new()
-            // Static routes
-            .route("/", routing::get(response::Html(index)))
-
-            // Static files
-            .route("/index.js", routing::get(Self::make_js(index_js)))
-            .route("/style.css", routing::get(Self::make_css(style_css)))
-
-            // Dynamic API calls
+            // API calls
             .route("/health", routing::get(Self::health))
             .route("/api/indexers", routing::get(api::get_indexers))
             .route("/api/indexers/specifications", routing::get(api::get_indexer_specifications))
+            .route("/api/streams", routing::post(api::post_streams))
             .route("/api/download", routing::post(api::post_download))
-            .route("/api/downloadStatus/{id}", routing::get(api::get_download_status))
+
+            // Dependencies & Web source
+            .nest_service("/third-party", third_party_service)
+            .fallback_service(web_source_service)
 
             // State
             .with_state(Arc::new(api::AppState::new(environment, state)));

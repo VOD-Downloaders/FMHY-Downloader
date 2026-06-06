@@ -10,8 +10,6 @@ use super::super::logging::LogLevel;
 /////////////////////////////////////////////////////
 #[derive(Debug, Clone, Error)]
 pub enum EnvError {
-    #[error("FLARESOLVERR_URL is not set in the current environment.")]
-    MissingFlaresolverrUrl,
     #[error("FLARESOLVERR_URL is set to an invalid url \"{url}\", error: {error}")]
     InvalidFlaresolverrUrl { url: String, error: url::ParseError },
     #[error("LOG_LEVEL contains invalid data (must be \"debug\", \"info\", \"warning\" or \"error\". Received: {log_level}")]
@@ -32,7 +30,7 @@ pub enum EnvError {
 #[derive(Debug, Clone)]
 pub struct EnvOptions {
     pub log_level: LogLevel,
-    pub flaresolverr_url: Url,
+    pub flaresolverr_url: Option<Url>,
     pub webui_port: u16,
 
     pub max_index_find_attempts: u8,
@@ -44,7 +42,7 @@ impl Default for EnvOptions {
     fn default() -> Self {
         Self {
             log_level: LogLevel::Info,
-            flaresolverr_url: Url::parse("http://flaresolverr:8191/v1").unwrap(),
+            flaresolverr_url: None,
             webui_port: 8080,
 
             max_index_find_attempts: 5,
@@ -91,9 +89,9 @@ impl EnvOptions {
         }
     }
 
-    fn parse_flaresolverr_url() -> Result<Url, EnvError> {
+    fn parse_flaresolverr_url() -> Result<Option<Url>, EnvError> {
         let Ok(flaresolverr_url) = env::var("FLARESOLVERR_URL") else {
-            return Err(EnvError::MissingFlaresolverrUrl);
+            return Ok(None);
         };
 
         let flaresolverr_url = Url::parse(flaresolverr_url.as_str()).map_err(|error| {
@@ -103,7 +101,7 @@ impl EnvOptions {
             };
         })?;
 
-        Ok(flaresolverr_url)
+        Ok(Some(flaresolverr_url))
     }
 
     fn parse_webui_port() -> Result<Option<u16>, EnvError> {
