@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>FMHY Downloader — Search</title>
+		<link rel="stylesheet" href="/third-party/bootstrap/css/bootstrap.min.css">
+		<link rel="stylesheet" href="style.css">
+		<script src="/third-party/bootstrap/js/bootstrap.bundle.min.js" defer></script>
+		<script src="components/sidebar.js" defer></script>
+		<script src="app.js" defer></script>
+	</head>
+	<body data-page="search">
+		<div class="d-flex" id="app">
+			<component-sidebar></component-sidebar>
+
+			<main id="main-content" class="flex-grow-1 overflow-auto p-4">
+				<h2 class="mb-4">Search</h2>
+
+				<!-- URL-based stream retrieval (implemented) -->
+				<div class="card mb-4">
+					<div class="card-header fw-semibold">Get Streams by URL</div>
+					<div class="card-body">
+						<div class="row g-2 align-items-end">
+							<div class="col-lg-5">
+								<label class="form-label" for="search-url">VOD URL</label>
+								<input type="url" class="form-control" id="search-url" placeholder="https://…">
+							</div>
+							<div class="col-lg-4">
+								<label class="form-label" for="search-indexer">Indexer</label>
+								<select class="form-select" id="search-indexer">
+									<option value="">— select indexer —</option>
+								</select>
+							</div>
+							<div class="col-lg-3">
+								<button class="btn btn-primary w-100" id="btn-get-streams" type="button">
+									Get Streams
+								</button>
+							</div>
+						</div>
+						<div id="search-error" class="text-danger mt-2 d-none"></div>
+						<div id="search-spinner" class="mt-2 d-none">
+							<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+							Retrieving streams…
+						</div>
+					</div>
+				</div>
+
+				<!-- Title / keyword search (not yet implemented) -->
+				<div class="card opacity-50">
+					<div class="card-header fw-semibold">
+						Search Movies &amp; Series
+						<span class="badge bg-secondary ms-2">Not implemented</span>
+					</div>
+					<div class="card-body">
+						<!-- TODO: title search requires VOD indexing feature -->
+						<div class="row g-2">
+							<div class="col-lg-7">
+								<input type="text" class="form-control" placeholder="Search title…" disabled>
+							</div>
+							<div class="col-lg-3">
+								<select class="form-select" disabled>
+									<option>All types</option>
+									<option>Movies</option>
+									<option>Series</option>
+								</select>
+							</div>
+							<div class="col-lg-2">
+								<button class="btn btn-secondary w-100" type="button" disabled>Search</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</main>
+		</div>
+	</body>
+</html>

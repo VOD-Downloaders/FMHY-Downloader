@@ -8,66 +8,10 @@ use futures::TryFutureExt;
 use serde::{Serialize, Deserialize};
 
 use super::VERSION_TAG_MAJOR_MINOR;
+use super::download::*;
 
 pub const INDEXERS_DIR: &str = "/config/indexers/";
 pub const INDEXER_SPECIFICATIONS_DIR: &str = "/config/indexers/specifications/";
-
-/////////////////////////////////////////////////////
-// DownloadSpecifications
-/////////////////////////////////////////////////////
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IndexDownloadSpecification {
-    pub wait_time: u8,
-    pub retries: u8,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MasterDownloadSpecification {
-    pub wait_time: u8,
-    pub retries: u8,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MP4DownloadSpecification {
-    pub wait_time: u32,
-    pub retries: u32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum DownloadMethod {
-    #[serde(rename = "index")]
-    IndexInterception(IndexDownloadSpecification),
-
-    #[serde(rename = "master")]
-    MasterInterception(MasterDownloadSpecification),
-
-    #[serde(rename = "mp4")]
-    MP4Interception(MP4DownloadSpecification),
-}
-
-/////////////////////////////////////////////////////
-// ProcessingSpecifications
-/////////////////////////////////////////////////////
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcessingSpecification {
-    pub remove_bytes: u32,
-}
-
-impl Default for ProcessingSpecification {
-    fn default() -> Self {
-        Self { remove_bytes: 0 }
-    }
-}
-
-/////////////////////////////////////////////////////
-// DownloadSpecification
-/////////////////////////////////////////////////////
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DownloadSpecification {
-    pub method: DownloadMethod,
-    pub preprocessing: ProcessingSpecification,
-}
 
 /////////////////////////////////////////////////////
 // IndexerSpecification
