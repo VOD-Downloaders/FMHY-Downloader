@@ -89,6 +89,7 @@ impl Router {
             .route("/health", routing::get(Self::health))
             .route("/api/indexers", routing::get(api::get_indexers))
             .route("/api/indexers/create", routing::post(api::post_create_indexer))
+            .route("/api/indexers/delete", routing::post(api::post_delete_indexer))
             .route("/api/indexers/specifications", routing::get(api::get_indexer_specifications))
             .route("/api/indexers/specifications/refresh", routing::post(api::post_refresh_indexer_specifications))
             .route("/api/streams", routing::post(api::post_streams))

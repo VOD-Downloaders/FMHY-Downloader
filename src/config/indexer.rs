@@ -89,6 +89,10 @@ pub enum GetSpecificationError {
     UnableToWriteIndexer(String, PathBuf, std::io::Error),
 }
 
+pub fn indexer_name_to_path(name: &str) -> PathBuf {
+    PathBuf::from(INDEXERS_DIR.to_string() + name.to_lowercase().as_str() + ".json")
+}
+
 pub async fn parse_indexer_specification_from_file(file: &Path) -> Result<IndexerSpecification, ParseIndexError> {
     if !file.exists() {
         return Err(ParseIndexError::FileDoesntExist(file.to_path_buf()));

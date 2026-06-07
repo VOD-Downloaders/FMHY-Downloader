@@ -56,8 +56,7 @@ pub async fn post_create_indexer(
 ) -> Result<CreateIndexerResponse, ErrorResponse> {
     trace!("Received post_create_indexer for {:?}", payload);
 
-    let path = PathBuf::from(config::INDEXERS_DIR.to_string() + payload.indexer.name.to_lowercase().as_str() + ".json");
-    config::write_indexer_to_file(&payload.indexer, path.as_path())
+    config::write_indexer_to_file(&payload.indexer, config::indexer_name_to_path(&payload.indexer.name.as_str()).as_path())
         .await
         .map_err(|error| ErrorResponse {
             status: StatusCode::BAD_REQUEST,
@@ -68,6 +67,24 @@ pub async fn post_create_indexer(
     state.state.write().unwrap().indexers = config::load_indexers().await;
 
     Ok(CreateIndexerResponse { status: StatusCode::OK })
+}
+
+pub async fn post_delete_indexer(
+    State(state): State<Arc<AppState>>, extract::Json(payload): extract::Json<DeleteIndexerRequest>,
+) -> Result<DeleteIndexerResponse, ErrorResponse> {
+    trace!("Received post_delete_indexer for \"{}\".", payload.name);
+
+    tokio::fs::remove_file(config::indexer_name_to_path(payload.name.as_str()).as_path())
+        .await
+        .map_err(|error| ErrorResponse {
+            status: StatusCode::BAD_REQUEST,
+            error: format!("Unable to delete indexer \"{}\" due to error: {}", payload.name, error),
+        })?;
+
+    // Update indexers in state
+    state.state.write().unwrap().indexers = config::load_indexers().await;
+
+    Ok(DeleteIndexerResponse { status: StatusCode::OK })
 }
 
 pub async fn get_indexer_specifications(State(_state): State<Arc<AppState>>) -> Result<IndexerSpecificationsResponse, ErrorResponse> {
