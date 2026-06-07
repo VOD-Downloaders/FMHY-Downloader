@@ -86,6 +86,22 @@ const App = {
         return data.indexers || [];
     },
 
+    async refreshIndexerSpecifications() {
+        // POST /api/indexers/specifications/refresh fetches the latest specs from GitHub and
+        // returns the freshly loaded list.
+        const res = await fetch("/api/indexers/specifications/refresh", { method: "POST" });
+
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+
+            throw new Error(data.error || res.statusText);
+        }
+
+        const data = await res.json();
+
+        return data.indexers || [];
+    },
+
     async createIndexer(indexer) {
         // POST /api/indexers/create expects the indexer wrapped under an `indexer` key and
         // returns a status code with no body.
@@ -412,6 +428,12 @@ const App = {
     },
 
     // Indexers page
+    //
+    // The form is shared between two flows:
+    //   - "create": pick a specification, tweak the editable fields, create a new indexer.
+    //   - "edit":   click an active indexer, load its values back into the form, save (overwrites).
+    // Locked parts (method type, segment headers, byte removal, based_on) live in App.formLocked so
+    // they survive editing without being shown in the UI.
 
     async initIndexersPage() {
         // Load specifications (to create from) and the already-active indexers (to list).
@@ -422,8 +444,30 @@ const App = {
         }
         await App.loadIndexers();
 
+        App.populateSpecSelect();
+
+        document.getElementById("indexer-spec").addEventListener("change", (event) => {
+            const index = event.target.value;
+
+            if (index === "") {
+                App.resetIndexerForm();
+                return;
+            }
+
+            App.startCreateFromSpec(App.specifications[parseInt(index, 10)]);
+        });
+
+        document.getElementById("btn-save-indexer").addEventListener("click", App.handleSaveIndexer);
+        document.getElementById("btn-cancel-edit").addEventListener("click", App.resetIndexerForm);
+        document.getElementById("btn-refresh-specs").addEventListener("click", App.handleRefreshSpecs);
+
+        App.renderActiveIndexers();
+    },
+
+    populateSpecSelect() {
         const specSelect = document.getElementById("indexer-spec");
 
+        specSelect.innerHTML = "<option value=\"\">— select specification —</option>";
         App.specifications.forEach((spec, i) => {
             const opt = document.createElement("option");
 
@@ -431,36 +475,19 @@ const App = {
             opt.textContent = spec.name;
             specSelect.appendChild(opt);
         });
-
-        specSelect.addEventListener("change", () => {
-            const index = specSelect.value;
-
-            if (index === "") {
-                document.getElementById("indexer-form").classList.add("d-none");
-                return;
-            }
-
-            App.prefillIndexerForm(App.specifications[parseInt(index, 10)]);
-            document.getElementById("indexer-form").classList.remove("d-none");
-        });
-
-        document.getElementById("btn-create-indexer").addEventListener("click", App.handleCreateIndexer);
-
-        App.renderActiveIndexers();
     },
 
-    prefillIndexerForm(spec) {
-        const method = spec.download.method;
-        const pre = spec.download.segment_pre_download;
-
-        document.getElementById("indexer-name").value = spec.name;
-        document.getElementById("indexer-cloudflare").checked = spec.uses_cloudflare;
-
-        // URL is a dropdown of the spec's main URL plus any mirrors.
+    // Fill the URL dropdown with the given URLs and select `selected` (added if missing).
+    setIndexerUrlOptions(urls, selected) {
         const urlSelect = document.getElementById("indexer-url");
+        const all = [...urls];
+
+        if (selected && !all.includes(selected)) {
+            all.unshift(selected);
+        }
 
         urlSelect.innerHTML = "";
-        [spec.url, ...(spec.mirrors || [])].forEach((url) => {
+        all.forEach((url) => {
             const opt = document.createElement("option");
 
             opt.value = url;
@@ -468,21 +495,85 @@ const App = {
             urlSelect.appendChild(opt);
         });
 
-        // Method type is locked to the spec; wait_time and retries are editable defaults.
-        document.getElementById("indexer-method").value = method.type;
-        document.getElementById("indexer-wait-time").value = method.wait_time;
-        document.getElementById("indexer-retries").value = method.retries;
-
-        // Editable fields.
-        document.getElementById("indexer-segment-timeout").value = pre.segment_timeout;
-        document.getElementById("indexer-segment-attempts").value = pre.segment_attempts;
+        if (selected) {
+            urlSelect.value = selected;
+        }
     },
 
-    async handleCreateIndexer() {
+    // Shared field population. `download` is a DownloadSpecification (from a spec or an indexer).
+    fillIndexerFields(name, cloudflare, download) {
+        document.getElementById("indexer-name").value = name;
+        document.getElementById("indexer-cloudflare").checked = cloudflare;
+        document.getElementById("indexer-method").value = download.method.type;
+        document.getElementById("indexer-wait-time").value = download.method.wait_time;
+        document.getElementById("indexer-retries").value = download.method.retries;
+        document.getElementById("indexer-segment-timeout").value = download.segment_pre_download.segment_timeout;
+        document.getElementById("indexer-segment-attempts").value = download.segment_pre_download.segment_attempts;
+
+        document.getElementById("indexer-error").classList.add("d-none");
+        document.getElementById("indexer-form").classList.remove("d-none");
+    },
+
+    startCreateFromSpec(spec) {
+        App.formLocked = {
+            methodType: spec.download.method.type,
+            headers: spec.download.segment_pre_download.headers,
+            postDownload: spec.download.segment_post_download,
+            basedOn: spec.name,
+        };
+
+        App.setIndexerUrlOptions([spec.url, ...(spec.mirrors || [])], spec.url);
+        App.fillIndexerFields(spec.name, spec.uses_cloudflare, spec.download);
+
+        document.getElementById("indexer-form-title").textContent = "Create Indexer";
+        document.getElementById("btn-save-indexer").textContent = "Create Indexer";
+        document.getElementById("btn-cancel-edit").classList.add("d-none");
+    },
+
+    startEditIndexer(indexer) {
+        App.formLocked = {
+            methodType: indexer.download.method.type,
+            headers: indexer.download.segment_pre_download.headers,
+            postDownload: indexer.download.segment_post_download,
+            basedOn: indexer.based_on,
+        };
+
+        // Offer the URLs of the spec it was based on (if still present), plus its current URL.
+        const spec = App.specifications.find((item) => item.name === indexer.based_on);
+        const urls = spec ? [spec.url, ...(spec.mirrors || [])] : [indexer.url];
+
+        App.setIndexerUrlOptions(urls, indexer.url);
+        App.fillIndexerFields(indexer.name, indexer.uses_cloudflare, indexer.download);
+
+        // The spec dropdown is a create-only entry point; editing detaches from it.
+        document.getElementById("indexer-spec").value = "";
+
+        document.getElementById("indexer-form-title").textContent = "Edit Indexer — " + indexer.name;
+        document.getElementById("btn-save-indexer").textContent = "Save Changes";
+        document.getElementById("btn-cancel-edit").classList.remove("d-none");
+
+        document.getElementById("indexer-form").scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+
+    resetIndexerForm() {
+        App.formLocked = null;
+        document.getElementById("indexer-spec").value = "";
+        document.getElementById("indexer-form").classList.add("d-none");
+        document.getElementById("indexer-error").classList.add("d-none");
+        document.getElementById("indexer-form-title").textContent = "Create Indexer";
+        document.getElementById("btn-save-indexer").textContent = "Create Indexer";
+        document.getElementById("btn-cancel-edit").classList.add("d-none");
+    },
+
+    async handleSaveIndexer() {
         const errorEl = document.getElementById("indexer-error");
-        const btn = document.getElementById("btn-create-indexer");
+        const btn = document.getElementById("btn-save-indexer");
 
         errorEl.classList.add("d-none");
+
+        if (!App.formLocked) {
+            return;
+        }
 
         const name = document.getElementById("indexer-name").value.trim();
         const url = document.getElementById("indexer-url").value;
@@ -493,29 +584,26 @@ const App = {
             return;
         }
 
-        const specIndex = document.getElementById("indexer-spec").value;
-        const spec = App.specifications[parseInt(specIndex, 10)];
-
-        // Headers and byte removal are taken from the specification (not shown in the UI). The method
-        // type is locked to the spec, but wait_time/retries, timeouts, URL, name and Cloudflare are editable.
+        // Headers, byte removal, method type and based_on are locked (App.formLocked). Editable:
+        // name, URL, Cloudflare, wait_time/retries and segment timeouts.
         const indexer = {
             name: name,
             url: url,
             uses_cloudflare: document.getElementById("indexer-cloudflare").checked,
             download: {
                 method: {
-                    type: spec.download.method.type,
+                    type: App.formLocked.methodType,
                     wait_time: Number(document.getElementById("indexer-wait-time").value),
                     retries: Number(document.getElementById("indexer-retries").value),
                 },
                 segment_pre_download: {
                     segment_timeout: Number(document.getElementById("indexer-segment-timeout").value),
                     segment_attempts: Number(document.getElementById("indexer-segment-attempts").value),
-                    headers: spec.download.segment_pre_download.headers,
+                    headers: App.formLocked.headers,
                 },
-                segment_post_download: spec.download.segment_post_download,
+                segment_post_download: App.formLocked.postDownload,
             },
-            based_on: (spec ? spec.name : name),
+            based_on: App.formLocked.basedOn,
         };
 
         btn.disabled = true;
@@ -524,9 +612,35 @@ const App = {
             await App.createIndexer(indexer);
             window.location.reload();
         } catch (err) {
-            errorEl.textContent = "Failed to create indexer: " + err.message;
+            errorEl.textContent = "Failed to save indexer: " + err.message;
             errorEl.classList.remove("d-none");
         } finally {
+            btn.disabled = false;
+        }
+    },
+
+    async handleRefreshSpecs() {
+        const btn = document.getElementById("btn-refresh-specs");
+        const spinner = document.getElementById("refresh-specs-spinner");
+        const status = document.getElementById("refresh-specs-status");
+
+        status.classList.add("d-none", "text-danger", "text-success");
+        spinner.classList.remove("d-none");
+        btn.disabled = true;
+
+        try {
+            App.specifications = await App.refreshIndexerSpecifications();
+            App.populateSpecSelect();
+
+            status.textContent = "Retrieved " + App.specifications.length + " specification(s).";
+            status.classList.add("text-success");
+            status.classList.remove("d-none");
+        } catch (err) {
+            status.textContent = "Failed to retrieve specifications: " + err.message;
+            status.classList.add("text-danger");
+            status.classList.remove("d-none");
+        } finally {
+            spinner.classList.add("d-none");
             btn.disabled = false;
         }
     },
@@ -547,7 +661,7 @@ const App = {
         table.classList.remove("d-none");
         tbody.innerHTML = "";
 
-        indexers.forEach((indexer) => {
+        indexers.forEach((indexer, i) => {
             const method = indexer.download && indexer.download.method ? indexer.download.method.type : "—";
             const tr = document.createElement("tr");
 
@@ -555,9 +669,14 @@ const App = {
                 "<td>" + App.escapeHtml(indexer.name) + "</td>" +
                 "<td>" + App.escapeHtml(indexer.url) + "</td>" +
                 "<td>" + (indexer.uses_cloudflare ? "yes" : "no") + "</td>" +
-                "<td>" + App.escapeHtml(method) + "</td>";
+                "<td>" + App.escapeHtml(method) + "</td>" +
+                "<td class=\"text-end\"><button class=\"btn btn-sm btn-outline-primary\" data-indexer-index=\"" + i + "\" type=\"button\">Edit</button></td>";
 
             tbody.appendChild(tr);
+        });
+
+        tbody.querySelectorAll("[data-indexer-index]").forEach((btn) => {
+            btn.addEventListener("click", () => App.startEditIndexer(App.indexers[parseInt(btn.dataset.indexerIndex, 10)]));
         });
     },
 };

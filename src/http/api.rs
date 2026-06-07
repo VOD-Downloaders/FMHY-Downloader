@@ -79,6 +79,20 @@ pub async fn get_indexer_specifications(State(_state): State<Arc<AppState>>) -> 
     })
 }
 
+pub async fn post_refresh_indexer_specifications(State(_state): State<Arc<AppState>>) -> Result<IndexerSpecificationsResponse, ErrorResponse> {
+    trace!("Received post_refresh_indexer_specifications");
+
+    config::get_new_specifications().await.map_err(|error| ErrorResponse {
+        status: StatusCode::BAD_GATEWAY,
+        error: format!("Unable to retrieve latest indexer specifications due to error: {}", error),
+    })?;
+
+    Ok(IndexerSpecificationsResponse {
+        status: StatusCode::OK,
+        indexers: config::load_indexer_specifications().await,
+    })
+}
+
 pub async fn post_streams(
     State(state): State<Arc<AppState>>, extract::Json(payload): extract::Json<StreamsRequest>,
 ) -> Result<StreamsResponse, ErrorResponse> {
