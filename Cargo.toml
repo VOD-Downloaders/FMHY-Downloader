@@ -20,6 +20,7 @@ rand = "0.10"
 base64 = "0.22"
 url = { version = "2", features = ["serde"] }
 chromiumoxide = "0.9"
+async-trait = "0.1"
 futures = "0.3"
 reqwest = { version = "0.13", features = ["blocking", "json"] }
 symphonia = { version = "0.6", features = ["mkv", "isomp4"] }
