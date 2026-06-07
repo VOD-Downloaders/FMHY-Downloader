@@ -118,6 +118,20 @@ const App = {
         }
     },
 
+    async deleteIndexer(name) {
+        const res = await fetch("/api/indexers/delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: name }),
+        });
+
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+
+            throw new Error(data.error || res.statusText);
+        }
+    },
+
     async fetchStreams(indexerName, url) {
         const res = await fetch("/api/streams", {
             method: "POST",
@@ -670,14 +684,34 @@ const App = {
                 "<td>" + App.escapeHtml(indexer.url) + "</td>" +
                 "<td>" + (indexer.uses_cloudflare ? "yes" : "no") + "</td>" +
                 "<td>" + App.escapeHtml(method) + "</td>" +
-                "<td class=\"text-end\"><button class=\"btn btn-sm btn-outline-primary\" data-indexer-index=\"" + i + "\" type=\"button\">Edit</button></td>";
+                "<td class=\"text-end\">" +
+                    "<button class=\"btn btn-sm btn-outline-primary me-2\" data-edit-index=\"" + i + "\" type=\"button\">Edit</button>" +
+                    "<button class=\"btn btn-sm btn-outline-danger\" data-delete-index=\"" + i + "\" type=\"button\">Delete</button>" +
+                "</td>";
 
             tbody.appendChild(tr);
         });
 
-        tbody.querySelectorAll("[data-indexer-index]").forEach((btn) => {
-            btn.addEventListener("click", () => App.startEditIndexer(App.indexers[parseInt(btn.dataset.indexerIndex, 10)]));
+        tbody.querySelectorAll("[data-edit-index]").forEach((btn) => {
+            btn.addEventListener("click", () => App.startEditIndexer(App.indexers[parseInt(btn.dataset.editIndex, 10)]));
         });
+
+        tbody.querySelectorAll("[data-delete-index]").forEach((btn) => {
+            btn.addEventListener("click", () => App.handleDeleteIndexer(App.indexers[parseInt(btn.dataset.deleteIndex, 10)]));
+        });
+    },
+
+    async handleDeleteIndexer(indexer) {
+        if (!window.confirm("Delete indexer \"" + indexer.name + "\"?")) {
+            return;
+        }
+
+        try {
+            await App.deleteIndexer(indexer.name);
+            window.location.reload();
+        } catch (err) {
+            window.alert("Failed to delete indexer: " + err.message);
+        }
     },
 };
 
