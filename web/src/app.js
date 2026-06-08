@@ -633,31 +633,32 @@ const App = {
         }
     },
 
-    async handleRefreshSpecs() {
-        const btn = document.getElementById("btn-refresh-specs");
-        const spinner = document.getElementById("refresh-specs-spinner");
-        const status = document.getElementById("refresh-specs-status");
+	async handleRefreshSpecs() {
+		const btn = document.getElementById("btn-refresh-specs");
+		const spinner = document.getElementById("refresh-specs-spinner");
+		const status = document.getElementById("refresh-specs-status");
 
-        status.classList.add("d-none", "text-danger", "text-success");
-        spinner.classList.remove("d-none");
-        btn.disabled = true;
+		status.classList.add("d-none");
+		status.classList.remove("text-danger", "text-success");
+		spinner.classList.remove("d-none");
+		btn.disabled = true;
 
-        try {
-            App.specifications = await App.refreshIndexerSpecifications();
-            App.populateSpecSelect();
+		try {
+			App.specifications = await App.refreshIndexerSpecifications();
+			App.populateSpecSelect();
 
-            status.textContent = "Retrieved " + App.specifications.length + " specification(s).";
-            status.classList.add("text-success");
-            status.classList.remove("d-none");
-        } catch (err) {
-            status.textContent = "Failed to retrieve specifications: " + err.message;
-            status.classList.add("text-danger");
-            status.classList.remove("d-none");
-        } finally {
-            spinner.classList.add("d-none");
-            btn.disabled = false;
-        }
-    },
+			status.textContent = "Retrieved " + App.specifications.length + " specification(s).";
+			status.classList.add("text-success");
+			status.classList.remove("d-none");
+		} catch (err) {
+			status.textContent = "Failed to retrieve specifications: " + err.message;
+			status.classList.add("text-danger");
+			status.classList.remove("d-none");
+		} finally {
+			spinner.classList.add("d-none");
+			btn.disabled = false;
+		}
+	},
 
     renderActiveIndexers() {
         const indexers = App.indexers;
