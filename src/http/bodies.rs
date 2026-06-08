@@ -7,6 +7,7 @@ use axum::{
 use super::super::config::Indexer;
 use super::super::config::IndexerSpecification;
 use super::super::search::MovieResultBody;
+use super::super::search::SeriesResultBody;
 use super::super::streams::Stream;
 
 /////////////////////////////////////////////////////
@@ -25,11 +26,13 @@ pub struct DeleteIndexerRequest {
 #[derive(Debug, Deserialize)]
 pub struct SearchMovieRequest {
     pub movie_name: String,
+    pub page: i32,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct SearchSeriesRequest {
     pub series_name: String,
+    pub page: i32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -136,7 +139,7 @@ impl IntoResponse for SearchMovieResponse {
 pub struct SearchSeriesResponse {
     #[serde(skip)]
     pub status: StatusCode,
-    // TODO: ...
+    pub response: SeriesResultBody,
 }
 
 impl IntoResponse for SearchSeriesResponse {

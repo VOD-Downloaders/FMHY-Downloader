@@ -122,7 +122,7 @@ pub async fn post_search_movie(
         error: format!("Unable to create requester object due to error: {}", error),
     })?;
 
-    let response = search::tmdb_get_movies(payload.movie_name.as_str(), &requester).await;
+    let response = search::tmdb_get_movies(payload.movie_name.as_str(), Some(payload.page), &requester).await;
 
     Ok(SearchMovieResponse {
         status: StatusCode::OK,
@@ -136,10 +136,16 @@ pub async fn post_search_series(
     trace!("Received post_search_series for \"{}\".", payload.series_name);
 
     // TODO: ...
+    let requester = request::Requester::get_curl(request::RequesterSpecification::default()).map_err(|error| ErrorResponse {
+        status: StatusCode::INTERNAL_SERVER_ERROR,
+        error: format!("Unable to create requester object due to error: {}", error),
+    })?;
 
-    Err(ErrorResponse {
-        status: StatusCode::NOT_IMPLEMENTED,
-        error: "Not implemented".to_string(),
+    let response = search::tmdb_get_series(payload.series_name.as_str(), Some(payload.page), &requester).await;
+
+    Ok(SearchSeriesResponse {
+        status: StatusCode::OK,
+        response: response,
     })
 }
 
