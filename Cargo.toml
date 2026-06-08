@@ -1,7 +1,7 @@
 [package]
 name = "fmhy_downloader"
 description = "fmhy_downloader is an application for downloading VODs off of freemediaheckyeah sites."
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 edition = "2024"
 license = "AGPL-3.0-or-later"
 readme = "README.md"
@@ -15,11 +15,12 @@ tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 axum = { version = "0.8", features = ["macros"] }
-tower-http = { version = "0.6", features = ["fs"] }
+tower-http = { version = "0.6", features = ["fs", "set-header"] }
 rand = "0.10"
 base64 = "0.22"
 url = { version = "2", features = ["serde"] }
 chromiumoxide = "0.9"
+async-trait = "0.1"
 futures = "0.3"
 reqwest = { version = "0.13", features = ["blocking", "json"] }
 symphonia = { version = "0.6", features = ["mkv", "isomp4"] }

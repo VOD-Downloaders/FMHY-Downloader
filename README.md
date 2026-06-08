@@ -91,7 +91,10 @@ The docker container exposes an HTTP server with callable API functions, listed 
 |---|---|---|---|---|
 | `GET` | `/health` | Healthcheck endpoint | - | `{ health }` |
 | `GET` | `/api/indexers` | Retrieve active indexers | - | `{ indexers }` |
+| `POST` | `/api/indexers/create` | Create an active indexer from a specification | `{ indexer }` | - |
+| `POST` | `/api/indexers/delete` | Delete an active indexer | `{ name }` | - |
 | `GET` | `/api/indexers/specifications` | Retrieve usable indexer specifications | - | `{ indexers }` |
+| `POST` | `/api/indexers/specifications/refresh` | Refetch indexer specifications from GitHub | - | `{ indexers }` |
 | `POST` | `/api/streams` | Analyze a URL and list the available streams | `{ indexer_name, input_url }` | `{ streams }` |
 | `POST` | `/api/download` | Start a VOD download | `{ indexer_name, stream, output_file }` | `{ id }` |
 
@@ -140,6 +143,7 @@ Contributions to the Documentation are highly appreciated, add your files to the
 | [base64](https://crates.io/crates/base64) | 0.22 | MIT / Apache-2.0 | Base64 encoder and decoder |
 | [rand](https://crates.io/crates/rand) | 0.10 | MIT / Apache-2.0 | Random number generator |
 | [url](https://crates.io/crates/url) | 2.5 | MIT / Apache-2.0 | Rust implementation of the URL standard. |
+| [async_trait](https://crates.io/crates/async_trait) | 0.1 | MIT / Apache-2.0 | Allow async functions in traits |
 | [chromiumoxide](https://crates.io/crates/chromiumoxide) | 0.9 | MIT / Apache-2.0 | A high-level API for interacting with the Chrome DevTools. |
 | [futures](https://crates.io/crates/futures) | 0.3 | MIT / Apache-2.0 | Abstractions for asynchronous programming. |
 | [reqwest](https://crates.io/crates/reqwest) | 0.13 | MIT / Apache-2.0 | Blocking HTTP client for Dispatcharr API communication |

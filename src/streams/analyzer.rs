@@ -13,7 +13,7 @@ use chromiumoxide::{
 use futures::StreamExt;
 use base64::{engine::general_purpose, Engine};
 
-use super::super::request::RequesterSpecification;
+use super::super::request::Requester;
 
 const CHROMIUM_PATH: &str = "/usr/lib/chromium/chromium";
 
@@ -43,9 +43,10 @@ pub enum AnalyzeError {
 /////////////////////////////////////////////////////
 // Analyzer
 /////////////////////////////////////////////////////
+#[async_trait::async_trait]
 pub trait Analyzer: Any + Send + Sync {
     // NOTE: When returning true this analyzer signals it's done analyzing requests and may stop early
-    fn analyze(&mut self, request: &BrowserRequest, response: &BrowserResponse, body: Option<String>) -> bool;
+    async fn analyze(&mut self, requester: &Requester, request: &BrowserRequest, response: Option<&BrowserResponse>, body: Option<String>) -> bool;
 
     // fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
@@ -54,9 +55,9 @@ pub trait Analyzer: Any + Send + Sync {
 /////////////////////////////////////////////////////
 // Analyze URL
 /////////////////////////////////////////////////////
-pub async fn analyze_url(
-    url: &Url, requester_specification: &RequesterSpecification, analyzers: &mut [Box<dyn Analyzer>], analyze_duration: u64,
-) -> Result<(), AnalyzeError> {
+pub async fn analyze_url(url: &Url, requester: &Requester, analyzers: &mut [Box<dyn Analyzer>], analyze_duration: u64) -> Result<(), AnalyzeError> {
+    let requester_specification = requester.get_specification();
+
     trace!(
         "Starting analysis on \"{}\" with user_agent: {}, headers: {:?}",
         url, requester_specification.user_agent, requester_specification.headers
@@ -168,7 +169,7 @@ pub async fn analyze_url(
                         });
 
                     // trace!("Response body from \"{}\" captured: {:?}", response.url, body);
-                    analyzers_copy.retain_mut(|analyzer| { !analyzer.analyze(&request, response, body.clone()) });
+                    run_analyzers(&mut analyzers_copy, requester, &request, Some(response), body.clone()).await;
                 }
 
                 if analyzers_copy.is_empty() {
@@ -181,8 +182,22 @@ pub async fn analyze_url(
         }
     }
 
+    // Handle requests that haven't gotten a response yet
+    for (_id, request) in pending {
+        run_analyzers(&mut analyzers_copy, requester, &request, None, None).await;
+    }
+
     let _ = browser.close().await;
     handler_task.abort();
 
     Ok(())
+}
+
+async fn run_analyzers(
+    analyzers: &mut Vec<&mut Box<dyn Analyzer>>, requester: &Requester, request: &BrowserRequest, response: Option<&BrowserResponse>,
+    body: Option<String>,
+) {
+    let done = futures::future::join_all(analyzers.iter_mut().map(|a| a.analyze(requester, request, response, body.clone()))).await;
+    let mut done = done.into_iter();
+    analyzers.retain(|_| !done.next().unwrap());
 }

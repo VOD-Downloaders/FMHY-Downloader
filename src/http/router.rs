@@ -3,7 +3,9 @@ use std::sync::Arc;
 use serde_json::json;
 use thiserror::Error;
 use axum::{routing, response};
+use axum::http::{header, HeaderValue};
 use tower_http::services::ServeDir;
+use tower_http::set_header::SetResponseHeaderLayer;
 
 use super::api;
 use super::super::env;
@@ -80,17 +82,22 @@ impl Router {
 
     fn init_router(environment: env::EnvOptions, state: config::State) -> axum::Router {
         let web_source_service = ServeDir::new(Self::WEB_SRC_DIRECTORY).append_index_html_on_directories(true);
+        let no_cache = SetResponseHeaderLayer::overriding(header::CACHE_CONTROL, HeaderValue::from_static("no-cache")); // Force revalidation
 
         let router = axum::Router::new()
             // API calls
             .route("/health", routing::get(Self::health))
             .route("/api/indexers", routing::get(api::get_indexers))
+            .route("/api/indexers/create", routing::post(api::post_create_indexer))
+            .route("/api/indexers/delete", routing::post(api::post_delete_indexer))
             .route("/api/indexers/specifications", routing::get(api::get_indexer_specifications))
+            .route("/api/indexers/specifications/refresh", routing::post(api::post_refresh_indexer_specifications))
             .route("/api/streams", routing::post(api::post_streams))
             .route("/api/download", routing::post(api::post_download))
 
-            // Dependencies & Web source
+            // HTML, CSS, JS
             .fallback_service(web_source_service)
+            .layer(no_cache)
 
             // State
             .with_state(Arc::new(api::AppState::new(environment, state)));

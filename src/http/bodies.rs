@@ -12,6 +12,16 @@ use super::super::streams::Stream;
 // Requests
 /////////////////////////////////////////////////////
 #[derive(Debug, Deserialize)]
+pub struct CreateIndexerRequest {
+    pub indexer: Indexer,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteIndexerRequest {
+    pub name: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct StreamsRequest {
     pub indexer_name: String,
     pub input_url: String,
@@ -58,6 +68,30 @@ pub struct IndexersResponse {
 impl IntoResponse for IndexersResponse {
     fn into_response(self) -> response::Response {
         (self.status, response::Json(self)).into_response()
+    }
+}
+
+#[derive(Serialize)]
+pub struct CreateIndexerResponse {
+    #[serde(skip)]
+    pub status: StatusCode,
+}
+
+impl IntoResponse for CreateIndexerResponse {
+    fn into_response(self) -> response::Response {
+        (self.status).into_response()
+    }
+}
+
+#[derive(Serialize)]
+pub struct DeleteIndexerResponse {
+    #[serde(skip)]
+    pub status: StatusCode,
+}
+
+impl IntoResponse for DeleteIndexerResponse {
+    fn into_response(self) -> response::Response {
+        (self.status).into_response()
     }
 }
 

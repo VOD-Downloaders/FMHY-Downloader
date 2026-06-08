@@ -1,6 +1,6 @@
-use tokio::io::AsyncWriteExt;
 use url::Url;
 use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
 
 use super::super::DownloadError;
 use super::super::super::config;
