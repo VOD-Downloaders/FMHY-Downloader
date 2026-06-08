@@ -56,7 +56,7 @@ pub async fn post_create_indexer(
 ) -> Result<CreateIndexerResponse, ErrorResponse> {
     trace!("Received post_create_indexer for {:?}", payload);
 
-    config::write_indexer_to_file(&payload.indexer, config::indexer_name_to_path(&payload.indexer.name.as_str()).as_path())
+    config::write_indexer_to_file(&payload.indexer, config::indexer_name_to_path(payload.indexer.name.as_str()).as_path())
         .await
         .map_err(|error| ErrorResponse {
             status: StatusCode::BAD_REQUEST,
