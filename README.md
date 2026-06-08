@@ -91,7 +91,10 @@ The docker container exposes an HTTP server with callable API functions, listed 
 |---|---|---|---|---|
 | `GET` | `/health` | Healthcheck endpoint | - | `{ health }` |
 | `GET` | `/api/indexers` | Retrieve active indexers | - | `{ indexers }` |
+| `POST` | `/api/indexers/create` | Create an active indexer from a specification | `{ indexer }` | - |
+| `POST` | `/api/indexers/delete` | Delete an active indexer | `{ name }` | - |
 | `GET` | `/api/indexers/specifications` | Retrieve usable indexer specifications | - | `{ indexers }` |
+| `POST` | `/api/indexers/specifications/refresh` | Refetch indexer specifications from GitHub | - | `{ indexers }` |
 | `POST` | `/api/streams` | Analyze a URL and list the available streams | `{ indexer_name, input_url }` | `{ streams }` |
 | `POST` | `/api/download` | Start a VOD download | `{ indexer_name, stream, output_file }` | `{ id }` |
 
