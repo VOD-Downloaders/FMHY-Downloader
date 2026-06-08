@@ -6,6 +6,7 @@ use axum::{
 
 use super::super::config::Indexer;
 use super::super::config::IndexerSpecification;
+use super::super::search::MovieResultBody;
 use super::super::streams::Stream;
 
 /////////////////////////////////////////////////////
@@ -122,7 +123,7 @@ impl IntoResponse for IndexerSpecificationsResponse {
 pub struct SearchMovieResponse {
     #[serde(skip)]
     pub status: StatusCode,
-    // TODO: ...
+    pub response: MovieResultBody,
 }
 
 impl IntoResponse for SearchMovieResponse {

@@ -1,5 +1,5 @@
 mod tmdb;
-mod info;
+mod http_bodies;
 
 pub use tmdb::*;
-pub use info::*;
+pub use http_bodies::*;

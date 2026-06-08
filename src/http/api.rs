@@ -112,7 +112,7 @@ pub async fn post_refresh_indexer_specifications(State(_state): State<Arc<AppSta
 }
 
 pub async fn post_search_movie(
-    State(state): State<Arc<AppState>>, extract::Json(payload): extract::Json<SearchMovieRequest>,
+    State(_state): State<Arc<AppState>>, extract::Json(payload): extract::Json<SearchMovieRequest>,
 ) -> Result<SearchMovieResponse, ErrorResponse> {
     trace!("Received post_search_movie for \"{}\".", payload.movie_name);
 
@@ -122,11 +122,11 @@ pub async fn post_search_movie(
         error: format!("Unable to create requester object due to error: {}", error),
     })?;
 
-    trace!("{:?}", search::tmdb_get_movies(payload.movie_name.as_str(), &requester).await);
+    let response = search::tmdb_get_movies(payload.movie_name.as_str(), &requester).await;
 
-    Err(ErrorResponse {
-        status: StatusCode::NOT_IMPLEMENTED,
-        error: "Not implemented".to_string(),
+    Ok(SearchMovieResponse {
+        status: StatusCode::OK,
+        response: response,
     })
 }
 
