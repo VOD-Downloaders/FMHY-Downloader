@@ -138,6 +138,7 @@ Contributions to the Documentation are highly appreciated, add your files to the
 | [tokio](https://crates.io/crates/tokio) | 1 | MIT | A runtime for writing reliable asynchronous applications |
 | [serde](https://crates.io/crates/serde) | 1 | MIT / Apache-2.0 | Serialization/deserialization framework |
 | [serde_json](https://crates.io/crates/serde_json) | 1 | MIT / Apache-2.0 | JSON parsing for API payloads |
+| [serde_url_params](https://crates.io/crates/serde_url_params) | 0.2 | MIT / Apache-2.0 | JSON parsing for URLs |
 | [axum](https://crates.io/crates/axum) | 0.8 | MIT | HTTP routing and request-handling |
 | [tower_http](https://crates.io/crates/tower_http) | 0.6 | MIT | Easy web file serving |
 | [base64](https://crates.io/crates/base64) | 0.22 | MIT / Apache-2.0 | Base64 encoder and decoder |
