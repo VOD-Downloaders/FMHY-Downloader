@@ -44,7 +44,7 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
             for attempt in 1..=specification.retries {
                 let mut analyzers: Vec<Box<dyn Analyzer>> = vec![Box::new(M3UAnalyzer::new())];
 
-                let result = analyze_url(input_url, requester.get_specification(), &mut analyzers, specification.wait_time as u64).await;
+                let result = analyze_url(input_url, requester, &mut analyzers, specification.wait_time as u64).await;
                 if let Err(error) = result {
                     error!("[Attempt {}/{}] Analyzing requests for {} failed with error: {}", attempt, specification.retries, input_url, error);
                     continue;
@@ -73,7 +73,7 @@ pub async fn get_streams(indexer: &config::Indexer, requester: &Requester, input
             for attempt in 1..=specification.retries {
                 let mut analyzers: Vec<Box<dyn Analyzer>> = vec![Box::new(M3UAnalyzer::new())];
 
-                let result = analyze_url(input_url, requester.get_specification(), &mut analyzers, specification.wait_time as u64).await;
+                let result = analyze_url(input_url, requester, &mut analyzers, specification.wait_time as u64).await;
                 if let Err(error) = result {
                     error!("[Attempt {}/{}] Analyzing requests for {} failed with error: {}", attempt, specification.retries, input_url, error);
                     continue;

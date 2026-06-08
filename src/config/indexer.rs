@@ -1,9 +1,12 @@
+use std::error::Error;
 use std::path::Path;
 use std::path::PathBuf;
 
 use url::Url;
 use thiserror::Error;
 use reqwest::Client;
+use tokio::fs::OpenOptions;
+use tokio::io::AsyncWriteExt;
 use futures::TryFutureExt;
 use serde::{Serialize, Deserialize};
 
@@ -38,7 +41,7 @@ pub struct Indexer {
 
     pub download: DownloadSpecification,
 
-    pub based_on: PathBuf,
+    pub based_on: String,
 }
 
 /////////////////////////////////////////////////////
@@ -52,6 +55,19 @@ pub enum ParseIndexError {
     UnableToReadFile(std::io::Error),
     #[error("Unable to parse json \"{json}\" due to error: {error}")]
     UnableToParseJson { json: String, error: serde_json::Error },
+}
+
+/////////////////////////////////////////////////////
+// WriteIndexerError
+/////////////////////////////////////////////////////
+#[derive(Debug, Error)]
+pub enum WriteIndexerError {
+    #[error("Failed to open file \"{0}\".")]
+    FailedToOpenFile(PathBuf, std::io::Error),
+    #[error("Unable to convert indexer to json.")]
+    UnableToConvertToJson,
+    #[error("Unable to read \"{0}\" with error: {1}")]
+    FailedToWrite(PathBuf, std::io::Error),
 }
 
 /////////////////////////////////////////////////////
@@ -71,6 +87,10 @@ pub enum GetSpecificationError {
     UnableToDownloadIndexer(Url, reqwest::Error),
     #[error("Unable to write indexer specification \"{0}\" to \"{1}\" due to error: {2}")]
     UnableToWriteIndexer(String, PathBuf, std::io::Error),
+}
+
+pub fn indexer_name_to_path(name: &str) -> PathBuf {
+    PathBuf::from(INDEXERS_DIR.to_string() + name.to_lowercase().as_str() + ".json")
 }
 
 pub async fn parse_indexer_specification_from_file(file: &Path) -> Result<IndexerSpecification, ParseIndexError> {
@@ -101,6 +121,31 @@ pub async fn parse_indexer_from_file(file: &Path) -> Result<Indexer, ParseIndexE
     })?;
 
     Ok(json_body)
+}
+
+pub async fn write_indexer_to_file(indexer: &Indexer, file: &Path) -> Result<(), WriteIndexerError> {
+    trace!("Opening \"{}\" for writing...", file.display());
+
+    let mut output_file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(file)
+        .await
+        .map_err(|error| {
+            trace!("Failed to open \"{}\", error: {:?}, source: {:?}", file.display(), error, error.source());
+
+            WriteIndexerError::FailedToOpenFile(file.to_path_buf(), error)
+        })?;
+
+    let json = serde_json::to_string(indexer).map_err(|_error| WriteIndexerError::UnableToConvertToJson)?;
+
+    output_file
+        .write_all(json.as_bytes())
+        .await
+        .map_err(|error| WriteIndexerError::FailedToWrite(file.to_path_buf(), error))?;
+
+    Ok(())
 }
 
 pub async fn load_indexers() -> Vec<Indexer> {
@@ -146,7 +191,7 @@ pub async fn load_indexer_specifications() -> Vec<IndexerSpecification> {
                 if let Ok(file_type) = entry.file_type()
                     && (!file_type.is_dir() && file_type.is_file())
                 {
-                    trace!("Found indexer path: {}", entry.path().display());
+                    trace!("Found indexer specification path: {}", entry.path().display());
 
                     match parse_indexer_specification_from_file(entry.path().as_path()).await {
                         Ok(specification) => specifications.push(specification),
