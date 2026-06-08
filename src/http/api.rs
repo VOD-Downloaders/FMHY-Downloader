@@ -15,6 +15,7 @@ use super::bodies::*;
 use super::super::env;
 use super::super::config;
 use super::super::request;
+use super::super::search;
 use super::super::streams;
 use super::super::download;
 
@@ -107,6 +108,38 @@ pub async fn post_refresh_indexer_specifications(State(_state): State<Arc<AppSta
     Ok(IndexerSpecificationsResponse {
         status: StatusCode::OK,
         indexers: config::load_indexer_specifications().await,
+    })
+}
+
+pub async fn post_search_movie(
+    State(state): State<Arc<AppState>>, extract::Json(payload): extract::Json<SearchMovieRequest>,
+) -> Result<SearchMovieResponse, ErrorResponse> {
+    trace!("Received post_search_movie for \"{}\".", payload.movie_name);
+
+    // TODO: ...
+    let requester = request::Requester::get_curl(request::RequesterSpecification::default()).map_err(|error| ErrorResponse {
+        status: StatusCode::INTERNAL_SERVER_ERROR,
+        error: format!("Unable to create requester object due to error: {}", error),
+    })?;
+
+    trace!("{:?}", search::tmdb_get_movies(payload.movie_name.as_str(), &requester).await);
+
+    Err(ErrorResponse {
+        status: StatusCode::NOT_IMPLEMENTED,
+        error: "Not implemented".to_string(),
+    })
+}
+
+pub async fn post_search_series(
+    State(_state): State<Arc<AppState>>, extract::Json(payload): extract::Json<SearchSeriesRequest>,
+) -> Result<SearchSeriesResponse, ErrorResponse> {
+    trace!("Received post_search_series for \"{}\".", payload.series_name);
+
+    // TODO: ...
+
+    Err(ErrorResponse {
+        status: StatusCode::NOT_IMPLEMENTED,
+        error: "Not implemented".to_string(),
     })
 }
 

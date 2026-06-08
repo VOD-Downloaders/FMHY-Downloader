@@ -1,0 +1,19 @@
+use serde::{Deserialize, Serialize};
+
+/////////////////////////////////////////////////////
+// MovieInfo
+/////////////////////////////////////////////////////
+#[derive(Debug, Serialize)]
+pub struct MovieInfo {}
+
+/////////////////////////////////////////////////////
+// SeriesInfo
+/////////////////////////////////////////////////////
+#[derive(Debug, Serialize)]
+pub struct EpisodeInfo {}
+
+#[derive(Debug, Serialize)]
+pub struct SeasonInfo {}
+
+#[derive(Debug, Serialize)]
+pub struct SeriesInfo {}

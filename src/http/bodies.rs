@@ -22,6 +22,16 @@ pub struct DeleteIndexerRequest {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct SearchMovieRequest {
+    pub movie_name: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SearchSeriesRequest {
+    pub series_name: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct StreamsRequest {
     pub indexer_name: String,
     pub input_url: String,
@@ -103,6 +113,32 @@ pub struct IndexerSpecificationsResponse {
 }
 
 impl IntoResponse for IndexerSpecificationsResponse {
+    fn into_response(self) -> response::Response {
+        (self.status, response::Json(self)).into_response()
+    }
+}
+
+#[derive(Serialize)]
+pub struct SearchMovieResponse {
+    #[serde(skip)]
+    pub status: StatusCode,
+    // TODO: ...
+}
+
+impl IntoResponse for SearchMovieResponse {
+    fn into_response(self) -> response::Response {
+        (self.status, response::Json(self)).into_response()
+    }
+}
+
+#[derive(Serialize)]
+pub struct SearchSeriesResponse {
+    #[serde(skip)]
+    pub status: StatusCode,
+    // TODO: ...
+}
+
+impl IntoResponse for SearchSeriesResponse {
     fn into_response(self) -> response::Response {
         (self.status, response::Json(self)).into_response()
     }
