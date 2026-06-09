@@ -172,6 +172,42 @@ const App = {
         return data.id;
     },
 
+    async searchMovies(query) {
+        const res = await fetch("/api/search/movie", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ movie_name: query, page: 1 }),
+        });
+
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+
+            throw new Error(data.error || res.statusText);
+        }
+
+        const data = await res.json();
+
+        return (data.response && data.response.results) || [];
+    },
+
+    async searchSeries(query) {
+        const res = await fetch("/api/search/series", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ series_name: query, page: 1 }),
+        });
+
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+
+            throw new Error(data.error || res.statusText);
+        }
+
+        const data = await res.json();
+
+        return (data.response && data.response.results) || [];
+    },
+
     // Loads indexers from the API and caches them. Returns the list.
     async loadIndexers() {
         try {
@@ -251,6 +287,10 @@ const App = {
             await App.initIndexersPage();
         },
 
+        discover() {
+            App.initDiscoverPage();
+        },
+
         streams() {
             App.renderStreams();
         },
@@ -305,6 +345,99 @@ const App = {
             spinnerEl.classList.add("d-none");
             btn.disabled = false;
         }
+    },
+
+    // Discover page
+
+    TMDB_IMAGE_BASE: "https://image.tmdb.org/t/p/w300",
+
+    initDiscoverPage() {
+        const input = document.getElementById("discover-query");
+
+        document.getElementById("btn-discover").addEventListener("click", App.handleDiscover);
+        input.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                App.handleDiscover();
+            }
+        });
+
+        input.focus();
+    },
+
+    selectedDiscoverType() {
+        const checked = document.querySelector("input[name=\"discover-type\"]:checked");
+
+        return checked ? checked.value : "movie";
+    },
+
+    async handleDiscover() {
+        const query = document.getElementById("discover-query").value.trim();
+        const type = App.selectedDiscoverType();
+        const errorEl = document.getElementById("discover-error");
+        const spinnerEl = document.getElementById("discover-spinner");
+        const btn = document.getElementById("btn-discover");
+
+        errorEl.classList.add("d-none");
+
+        if (!query) {
+            errorEl.textContent = "Enter a title to search.";
+            errorEl.classList.remove("d-none");
+            return;
+        }
+
+        spinnerEl.classList.remove("d-none");
+        btn.disabled = true;
+
+        try {
+            const results = type === "series" ? await App.searchSeries(query) : await App.searchMovies(query);
+
+            App.renderDiscoverResults(results, type);
+        } catch (err) {
+            errorEl.textContent = "Search failed: " + err.message;
+            errorEl.classList.remove("d-none");
+            App.renderDiscoverResults([], type);
+        } finally {
+            spinnerEl.classList.add("d-none");
+            btn.disabled = false;
+        }
+    },
+
+    renderDiscoverResults(results, type) {
+        const grid = document.getElementById("discover-results");
+        const emptyEl = document.getElementById("discover-empty");
+
+        grid.innerHTML = "";
+
+        if (!results || results.length === 0) {
+            emptyEl.classList.remove("d-none");
+            return;
+        }
+
+        emptyEl.classList.add("d-none");
+
+        results.forEach((item) => {
+            const title = type === "series" ? item.name : item.title;
+            const date = type === "series" ? item.first_air_date : item.release_date;
+            const year = date ? date.substring(0, 4) : "—";
+            const poster = item.poster_path
+                ? "<img src=\"" + App.TMDB_IMAGE_BASE + item.poster_path + "\" class=\"card-img-top\" alt=\"" + App.escapeHtml(title) + "\">"
+                : "<div class=\"card-img-top d-flex align-items-center justify-content-center bg-secondary text-white\" style=\"height:300px\">No image</div>";
+
+            const col = document.createElement("div");
+
+            col.className = "col";
+            col.innerHTML =
+                "<div class=\"card h-100\">" +
+                    poster +
+                    "<div class=\"card-body p-2\">" +
+                        "<h6 class=\"card-title mb-1\">" + App.escapeHtml(title) + "</h6>" +
+                        "<p class=\"card-text text-muted small mb-0\">" + App.escapeHtml(year) + "</p>" +
+                    "</div>" +
+                "</div>";
+
+            grid.appendChild(col);
+        });
     },
 
     // Streams page

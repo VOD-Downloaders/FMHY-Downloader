@@ -5,6 +5,7 @@ class Sidebar extends HTMLElement {
     static PAGES = [
         { href: "index.html", label: "Home" },
         { href: "indexers.html", label: "Indexers" },
+        { href: "discover.html", label: "Discover" },
         { href: "search.html", label: "Search" },
         { href: "streams.html", label: "Streams" },
         { href: "downloads.html", label: "Downloads" },

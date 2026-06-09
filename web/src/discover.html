@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>FMHY Downloader — Discover</title>
+		<link rel="stylesheet" href="/third-party/bootstrap/css/bootstrap.min.css">
+		<link rel="stylesheet" href="style.css">
+		<script src="/third-party/bootstrap/js/bootstrap.bundle.min.js" defer></script>
+		<script src="components/sidebar.js" defer></script>
+		<script src="app.js" defer></script>
+	</head>
+	<body data-page="discover">
+		<div class="d-flex" id="app">
+			<component-sidebar></component-sidebar>
+
+			<main id="main-content" class="flex-grow-1 overflow-auto p-4">
+				<h2 class="mb-4">Discover</h2>
+
+				<div class="card mb-4">
+					<div class="card-body">
+						<div class="row g-2 align-items-center">
+							<div class="col-auto">
+								<div class="btn-group" role="group" aria-label="Search type">
+									<input type="radio" class="btn-check" name="discover-type" id="discover-type-movie" value="movie" checked>
+									<label class="btn btn-outline-primary" for="discover-type-movie">Movies</label>
+
+									<input type="radio" class="btn-check" name="discover-type" id="discover-type-series" value="series">
+									<label class="btn btn-outline-primary" for="discover-type-series">Series</label>
+								</div>
+							</div>
+							<div class="col">
+								<input type="text" class="form-control" id="discover-query" placeholder="Search a title and press Enter…" autocomplete="off">
+							</div>
+							<div class="col-auto">
+								<button class="btn btn-primary" id="btn-discover" type="button">Search</button>
+							</div>
+						</div>
+						<div id="discover-error" class="text-danger mt-2 d-none"></div>
+						<div id="discover-spinner" class="mt-2 d-none">
+							<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+							Searching…
+						</div>
+					</div>
+				</div>
+
+				<p id="discover-empty" class="text-muted d-none">No results.</p>
+				<div id="discover-results" class="row row-cols-2 row-cols-md-4 row-cols-xl-6 g-3"></div>
+			</main>
+		</div>
+	</body>
+</html>
