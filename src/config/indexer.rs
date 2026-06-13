@@ -27,6 +27,7 @@ pub struct IndexerSpecification {
 
     pub uses_cloudflare: bool,
 
+    pub search: SearchSpecification,
     pub download: DownloadSpecification,
 }
 
@@ -39,6 +40,7 @@ pub struct Indexer {
     pub url: Url,
     pub uses_cloudflare: bool,
 
+    pub search: SearchSpecification,
     pub download: DownloadSpecification,
 
     pub based_on: String,

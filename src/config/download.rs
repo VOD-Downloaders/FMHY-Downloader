@@ -4,6 +4,15 @@ use serde::{Serialize, Deserialize};
 use super::super::request::HeaderMap;
 
 /////////////////////////////////////////////////////
+// SearchSpecification
+/////////////////////////////////////////////////////
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchSpecification {
+    pub movie_url: String,
+    pub series_url: String,
+}
+
+/////////////////////////////////////////////////////
 // DownloadSpecifications
 /////////////////////////////////////////////////////
 #[derive(Debug, Clone, Serialize, Deserialize)]
