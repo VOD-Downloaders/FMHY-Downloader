@@ -1,7 +1,5 @@
-mod tmdb;
-mod stream;
-mod http_bodies;
+mod info;
+mod streams;
 
-pub use tmdb::*;
-pub use stream::*;
-pub use http_bodies::*;
+pub use info::*;
+pub use streams::*;
