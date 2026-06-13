@@ -7,16 +7,6 @@ use super::super::super::config;
 use super::super::super::request;
 
 /////////////////////////////////////////////////////
-// SegmentDownloadArguments
-/////////////////////////////////////////////////////
-pub struct SegmentDownloadArguments {
-    pub segment_preprocessing: config::PreDownloadSpecifiation,
-    pub segment_postprocessing: config::PostDownloadSpecification,
-    pub segment_retries: u8,
-    pub segment_timeout: u8,
-}
-
-/////////////////////////////////////////////////////
 // Download
 /////////////////////////////////////////////////////
 pub async fn download_segments(
@@ -29,7 +19,7 @@ pub async fn download_segments(
 
         let mut last_error: Option<DownloadError> = None;
 
-        for attempt in 1..=indexer.download.segment_pre_download.segment_attempts {
+        for attempt in 1..=indexer.download.segment_download.segment_attempts {
             match download_segment(indexer, &segment, requester, output_file).await {
                 Ok(_) => {
                     last_error = None;
@@ -39,7 +29,7 @@ pub async fn download_segments(
                     warning!(
                         "[Attempt {}/{}] For segment \"{}\" failed with error: {}.",
                         attempt,
-                        indexer.download.segment_pre_download.segment_attempts,
+                        indexer.download.segment_download.segment_attempts,
                         segment.as_str(),
                         error
                     );
@@ -58,11 +48,8 @@ pub async fn download_segments(
 }
 
 async fn download_segment(indexer: &config::Indexer, url: &Url, requester: &request::Requester, output_file: &mut File) -> Result<(), DownloadError> {
-    let mut preprocessing = indexer.download.segment_pre_download.clone();
-    preprocessing.resolve_variables(&indexer.url, url);
-
     let contents = requester
-        .get_file_contents(url, Some(preprocessing.headers.clone()))
+        .get_file_contents(url, Some(indexer.download.segment_download.headers.clone()))
         .await
         .map_err(DownloadError::RequestFailed)?;
 
