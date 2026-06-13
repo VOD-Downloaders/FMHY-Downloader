@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-use super::super::request::HeaderMap;
+use crate::request::HeaderMap;
 
 /////////////////////////////////////////////////////
 // DownloadSpecifications

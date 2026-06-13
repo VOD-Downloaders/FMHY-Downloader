@@ -2,9 +2,9 @@ use url::Url;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
-use super::super::DownloadError;
-use super::super::super::config;
-use super::super::super::request;
+use crate::download::DownloadError;
+use crate::config;
+use crate::request;
 
 /////////////////////////////////////////////////////
 // Download

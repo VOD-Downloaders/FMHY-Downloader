@@ -4,11 +4,11 @@ use axum::{
     http::StatusCode,
 };
 
-use super::super::config::Indexer;
-use super::super::config::IndexerSpecification;
-use super::super::search::Stream;
-use super::super::search::MovieResultBody;
-use super::super::search::SeriesResultBody;
+use crate::config::Indexer;
+use crate::config::IndexerSpecification;
+use crate::search::streams::Stream;
+use crate::search::info::MovieResultBody;
+use crate::search::info::SeriesResultBody;
 
 /////////////////////////////////////////////////////
 // Requests

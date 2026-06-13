@@ -4,7 +4,7 @@ use serde::{Serialize, Deserialize};
 use super::MovieResultBody;
 use super::SeriesResultBody;
 
-use super::super::request;
+use crate::request;
 
 /////////////////////////////////////////////////////
 // Config

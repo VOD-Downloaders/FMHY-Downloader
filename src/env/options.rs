@@ -3,7 +3,7 @@ use std::env;
 use thiserror::Error;
 use url::Url;
 
-use super::super::logging::LogLevel;
+use crate::logging::LogLevel;
 
 /////////////////////////////////////////////////////
 // EnvError

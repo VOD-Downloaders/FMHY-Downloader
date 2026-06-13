@@ -6,10 +6,10 @@ use thiserror::Error;
 use url::Url;
 use tokio::fs::OpenOptions;
 
-use super::super::config;
-use super::super::request;
-use super::super::search::Stream;
-use super::super::search::StreamType;
+use crate::config;
+use crate::request;
+use crate::search::streams::Stream;
+use crate::search::streams::StreamType;
 
 use super::m3u;
 
