@@ -41,7 +41,7 @@ services:
 
   fmhy_bridge:
     image: ghcr.io/ggjorven/fmhy-bridge:latest
-    container: fmhy_bridge
+    container_name: fmhy_bridge
     environment:
       - LOG_LEVEL=info
     ports:
