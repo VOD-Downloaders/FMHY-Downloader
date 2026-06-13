@@ -92,10 +92,8 @@ impl Router {
             .route("/api/indexers/delete", routing::post(api::post_delete_indexer))
             .route("/api/indexers/specifications", routing::get(api::get_indexer_specifications))
             .route("/api/indexers/specifications/refresh", routing::post(api::post_refresh_indexer_specifications))
-            .route("/api/search/movie", routing::post(api::post_search_movie))
-            .route("/api/search/series", routing::post(api::post_search_series))
-            .route("/api/streams", routing::post(api::post_streams))
-            .route("/api/download", routing::post(api::post_download))
+            .route("/api/search/movie", routing::get(api::get_search_movie))
+            .route("/api/search/series", routing::get(api::get_search_series))
 
             // HTML, CSS, JS
             .fallback_service(web_source_service)

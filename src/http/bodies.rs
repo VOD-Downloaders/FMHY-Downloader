@@ -6,9 +6,9 @@ use axum::{
 
 use super::super::config::Indexer;
 use super::super::config::IndexerSpecification;
+use super::super::search::Stream;
 use super::super::search::MovieResultBody;
 use super::super::search::SeriesResultBody;
-use super::super::streams::Stream;
 
 /////////////////////////////////////////////////////
 // Requests
@@ -23,29 +23,19 @@ pub struct DeleteIndexerRequest {
     pub name: String,
 }
 
+/////////////////////////////////////////////////////
+// Queries
+/////////////////////////////////////////////////////
 #[derive(Debug, Deserialize)]
-pub struct SearchMovieRequest {
-    pub movie_name: String,
+pub struct SearchMovieQuery {
+    pub name: String,
     pub page: i32,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct SearchSeriesRequest {
-    pub series_name: String,
+pub struct SearchSeriesQuery {
+    pub name: String,
     pub page: i32,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct StreamsRequest {
-    pub indexer_name: String,
-    pub input_url: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct DownloadRequest {
-    pub indexer_name: String,
-    pub stream: Stream,
-    pub output_file: String,
 }
 
 /////////////////////////////////////////////////////

@@ -1,41 +1,6 @@
-use url::Url;
 use serde::{Serialize, Deserialize};
 
 use super::super::request::HeaderMap;
-
-/////////////////////////////////////////////////////
-// DownloadSpecifications
-/////////////////////////////////////////////////////
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IndexDownloadSpecification {
-    pub wait_time: u8,
-    pub retries: u8,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MasterDownloadSpecification {
-    pub wait_time: u8,
-    pub retries: u8,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MP4DownloadSpecification {
-    pub wait_time: u32,
-    pub retries: u32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum DownloadMethod {
-    #[serde(rename = "index")]
-    IndexInterception(IndexDownloadSpecification),
-
-    #[serde(rename = "master")]
-    MasterInterception(MasterDownloadSpecification),
-
-    #[serde(rename = "mp4")]
-    MP4Interception(MP4DownloadSpecification),
-}
 
 /////////////////////////////////////////////////////
 // DownloadSpecifications
@@ -77,7 +42,6 @@ impl Default for SegmentPostDownloadSpecification {
 /////////////////////////////////////////////////////
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DownloadSpecification {
-    pub method: DownloadMethod,
     pub segment_download: SegmentDownloadSpecifiation,
     pub segment_post_download: SegmentPostDownloadSpecification,
 }

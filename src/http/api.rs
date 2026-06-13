@@ -7,7 +7,7 @@ use std::{
 use url::Url;
 use axum::{
     extract,
-    extract::{State},
+    extract::{State, Query},
     http::{StatusCode},
 };
 
@@ -16,7 +16,6 @@ use super::super::env;
 use super::super::config;
 use super::super::request;
 use super::super::search;
-use super::super::streams;
 use super::super::download;
 
 /////////////////////////////////////////////////////
@@ -111,10 +110,10 @@ pub async fn post_refresh_indexer_specifications(State(_state): State<Arc<AppSta
     })
 }
 
-pub async fn post_search_movie(
-    State(_state): State<Arc<AppState>>, extract::Json(payload): extract::Json<SearchMovieRequest>,
+pub async fn get_search_movie(
+    State(_state): State<Arc<AppState>>, Query(query): Query<SearchMovieQuery>,
 ) -> Result<SearchMovieResponse, ErrorResponse> {
-    trace!("Received post_search_movie for \"{}\".", payload.movie_name);
+    trace!("Received post_search_movie for \"{}\" on page {}.", query.name, query.page);
 
     // TODO: ...
     let requester = request::Requester::get_curl(request::RequesterSpecification::default()).map_err(|error| ErrorResponse {
@@ -122,7 +121,7 @@ pub async fn post_search_movie(
         error: format!("Unable to create requester object due to error: {}", error),
     })?;
 
-    let response = search::tmdb_get_movies(payload.movie_name.as_str(), Some(payload.page), &requester).await;
+    let response = search::tmdb_get_movies(query.name.as_str(), Some(query.page), &requester).await;
 
     Ok(SearchMovieResponse {
         status: StatusCode::OK,
@@ -130,10 +129,10 @@ pub async fn post_search_movie(
     })
 }
 
-pub async fn post_search_series(
-    State(_state): State<Arc<AppState>>, extract::Json(payload): extract::Json<SearchSeriesRequest>,
+pub async fn get_search_series(
+    State(_state): State<Arc<AppState>>, Query(query): Query<SearchSeriesQuery>,
 ) -> Result<SearchSeriesResponse, ErrorResponse> {
-    trace!("Received post_search_series for \"{}\".", payload.series_name);
+    trace!("Received post_search_series for \"{}\" on page {}.", query.name, query.page);
 
     // TODO: ...
     let requester = request::Requester::get_curl(request::RequesterSpecification::default()).map_err(|error| ErrorResponse {
@@ -141,106 +140,10 @@ pub async fn post_search_series(
         error: format!("Unable to create requester object due to error: {}", error),
     })?;
 
-    let response = search::tmdb_get_series(payload.series_name.as_str(), Some(payload.page), &requester).await;
+    let response = search::tmdb_get_series(query.name.as_str(), Some(query.page), &requester).await;
 
     Ok(SearchSeriesResponse {
         status: StatusCode::OK,
         response: response,
-    })
-}
-
-pub async fn post_streams(
-    State(state): State<Arc<AppState>>, extract::Json(payload): extract::Json<StreamsRequest>,
-) -> Result<StreamsResponse, ErrorResponse> {
-    trace!("Received get_streams for {}.", payload.input_url);
-
-    let indexer = {
-        let guard = state.state.read().unwrap();
-        let indexer = guard
-            .indexers
-            .iter()
-            .find(|item| item.name == payload.indexer_name)
-            .ok_or(ErrorResponse {
-                status: StatusCode::BAD_REQUEST,
-                error: format!("Indexer by name \"{}\" not found.", payload.indexer_name),
-            })?;
-
-        indexer.clone()
-    };
-
-    let url = Url::parse(payload.input_url.as_str()).map_err(|error| ErrorResponse {
-        status: StatusCode::BAD_REQUEST,
-        error: format!("Invalid URL passed in, error: {}", error),
-    })?;
-
-    // TODO: Handle cloudflare
-    let requester = request::Requester::get_curl(request::RequesterSpecification::default()).map_err(|error| ErrorResponse {
-        status: StatusCode::PRECONDITION_FAILED,
-        error: format!("Unable to create requester object due to error: {}", error),
-    })?;
-
-    // let flaresolverr_url = state.environment.flaresolverr_url.clone().unwrap();
-    //
-    // let requester =
-    //     request::Requester::get_flaresolvedd_native(request::RequesterSpecification::default(), &flaresolverr_url, &url).map_err(|error| {
-    //         ErrorResponse {
-    //             status: StatusCode::PRECONDITION_FAILED,
-    //             error: format!("Unable to create requester object due to error: {}", error),
-    //         }
-    //     })?;
-
-    let streams = streams::get_streams(&indexer, &requester, &url).await;
-
-    Ok(StreamsResponse {
-        status: StatusCode::OK,
-        streams: streams,
-    })
-}
-
-pub async fn post_download(
-    State(state): State<Arc<AppState>>, extract::Json(payload): extract::Json<DownloadRequest>,
-) -> Result<DownloadResponse, ErrorResponse> {
-    trace!("Received post_download with: {:?}", payload);
-
-    let indexer = {
-        let guard = state.state.read().unwrap();
-        let indexer = guard
-            .indexers
-            .iter()
-            .find(|item| item.name == payload.indexer_name)
-            .ok_or(ErrorResponse {
-                status: StatusCode::BAD_REQUEST,
-                error: format!("Indexer by name \"{}\" not found.", payload.indexer_name),
-            })?;
-
-        indexer.clone()
-    };
-
-    // TODO: Handle cloudflare
-    let requester = request::Requester::get_curl(request::RequesterSpecification::default()).map_err(|error| ErrorResponse {
-        status: StatusCode::PRECONDITION_FAILED,
-        error: format!("Unable to create requester object due to error: {}", error),
-    })?;
-
-    let output_file = PathBuf::from(payload.output_file);
-
-    tokio::spawn(async move {
-        let result = download::download_stream(&indexer, payload.stream, &requester, output_file.as_path()).await;
-
-        if let Err(error) = result {
-            error!("Download failed due to error: {}", error);
-        }
-    });
-
-    let id = rand::random::<u32>();
-    trace!("Adding download by id {} to active downloads...", id);
-    {
-        let mut guard = state.downloads.write().unwrap();
-        guard.insert(id, DownloadInfo {});
-    }
-
-    Ok(DownloadResponse {
-        status: StatusCode::OK,
-        id: id,
     })
 }
