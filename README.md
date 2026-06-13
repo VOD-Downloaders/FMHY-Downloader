@@ -39,6 +39,15 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  fmhy_bridge:
+    image: ghcr.io/ggjorven/fmhy-bridge:latest
+    container: fmhy_bridge
+    environment:
+      - LOG_LEVEL=info
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:latest
     container_name: flaresolverr
